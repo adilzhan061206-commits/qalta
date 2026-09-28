@@ -151,7 +151,7 @@ body.dragging{cursor:grabbing}
 body.dragging .bub.target .bub-c{outline:2px dashed var(--faint);outline-offset:4px}
 body.dragging .bub.drop-ok .bub-c{outline:3px solid var(--accent);outline-offset:4px;transform:scale(1.12)}
 .bub.dragging{opacity:.35}
-.ghost{position:fixed;z-index:80;pointer-events:none;width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:var(--surface);box-shadow:0 12px 32px rgba(0,0,0,.35);transform:translate(-50%,-60%) scale(1.08);border:3px solid var(--accent)}
+.drag-ghost{position:fixed;z-index:80;pointer-events:none;width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:var(--surface);box-shadow:0 12px 32px rgba(0,0,0,.35);transform:translate(-50%,-60%) scale(1.08);border:3px solid var(--accent)}
 .drag-hint{font-size:12.5px;color:var(--muted);text-align:center;padding:0 8px}
 /* Split bills */
 .person{display:grid;grid-template-columns:1fr 112px 34px;gap:8px;align-items:center}
@@ -1193,7 +1193,7 @@ function openSplit(pre){
       ${st.payer === "other" ? `<div class="field"><label for="sp-payer">Кім төледі</label><select class="inp" id="sp-payer">${st.people.map((p, i) => `<option value="${i}" ${i === st.payerIdx ? "selected" : ""}>${esc(p.name || "Аты " + (i + 1))}</option>`).join("")}</select><span class="small muted">Сіз оған өз үлесіңізді қайтарасыз — қарыз ретінде жазылады.</span></div>` : ""}
       <div class="frow"><div class="field"><label for="sp-cat">Санат</label><select class="inp" id="sp-cat">${expCats.map(c => `<option value="${esc(c.id)}" ${c.id === st.c ? "selected" : ""}>${esc(c.icon + " " + c.name)}</option>`).join("")}</select></div>
       ${st.payer === "me" ? `<div class="field"><label for="sp-acc">Қай шоттан төледіңіз</label><select class="inp" id="sp-acc">${accOptions(st.acc)}</select></div>` : `<div></div>`}</div>
-      <div class="note small" id="sp-sum"></div>
+      <div class="note small" id="sp-sum" style="display:block"></div>
       <div class="err" id="sp-err"></div>
       <button class="btn primary block" id="sp-save">Сақтау</button>`, b => {
       const read = () => {
@@ -1313,7 +1313,7 @@ document.addEventListener("pointermove", e => {
   if (!drag.started) {
     if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
     drag.started = true;
-    const g = document.createElement("div"); g.className = "ghost"; g.textContent = drag.el.querySelector(".bub-c").textContent; document.body.appendChild(g); drag.ghost = g;
+    const g = document.createElement("div"); g.className = "drag-ghost"; g.textContent = drag.el.querySelector(".bub-c").textContent; document.body.appendChild(g); drag.ghost = g;
     drag.el.classList.add("dragging"); document.body.classList.add("dragging");
     $$(dropTargets(drag.kind)).forEach(t => { if (t !== drag.el) t.classList.add("target"); });
   }
