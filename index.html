@@ -345,6 +345,7 @@ function normalize(s){
   s = s && typeof s === "object" ? s : {};
   for (const k of ["accounts","cats","goals","recurring","debts"]) if (!Array.isArray(s[k])) s[k] = d[k];
   if (!s.budgets || typeof s.budgets !== "object") s.budgets = {};
+  if (!s.rates || typeof s.rates !== "object") s.rates = {};
   if (!s.cats.length) s.cats = d.cats;
   if (!s.accounts.length) s.accounts = d.accounts;
   s.v = 1;
@@ -367,6 +368,39 @@ const acc = id => S.settings.accounts.find(a => a.id === id);
 const goal = id => S.settings.goals.find(g => g.id === id);
 const debt = id => S.settings.debts.find(d => d.id === id);
 
+/* ---------- currencies ---------- */
+const CURS = {KZT: ["₸", "Теңге"], USD: ["$", "АҚШ доллары"], EUR: ["€", "Еуро"], RUB: ["₽", "Рубль"], CNY: ["¥", "Юань"], GBP: ["£", "Фунт"], TRY: ["₺", "Лира"], AED: ["AED", "Дирхам"], KGS: ["сом", "Қырғыз сомы"], UZS: ["сўм", "Өзбек сумы"]};
+const sym = c => (CURS[c] || [c])[0];
+const nf2 = new Intl.NumberFormat("ru-RU", {minimumFractionDigits: 0, maximumFractionDigits: 2});
+const fmtC = (n, c) => (!c || c === "KZT") ? fmt(n) : nf2.format(Math.round((n || 0) * 100) / 100) + " " + sym(c);
+const fmtCS = (n, c) => (n > 0 ? "+" : n < 0 ? "−" : "") + fmtC(Math.abs(n), c);
+const RATE_KEY = "qalta-rates-v1";
+let RATES = (() => { try { return JSON.parse(lsGet(RATE_KEY) || "null") || {kzt: {}, at: 0, src: ""}; } catch { return {kzt: {}, at: 0, src: ""}; } })();
+// ₸ for 1 unit of currency c: manual rate wins, then the fetched market rate
+function rate(c){
+  if (!c || c === "KZT") return 1;
+  const o = S.settings && S.settings.rates && +S.settings.rates[c];
+  if (o > 0) return o;
+  return RATES.kzt[c] || null;
+}
+const toKZT = (n, c) => { const r = rate(c); return r ? n * r : 0; };
+const accCur = id => { const a = acc(id); return (a && a.cur) || "KZT"; };
+const goalCur = g => (g && g.cur) || "KZT";
+const usedCurs = () => [...new Set([...S.settings.accounts.map(a => a.cur || "KZT"), ...S.settings.goals.map(goalCur)])].filter(c => c !== "KZT");
+const missingRates = () => usedCurs().filter(c => !rate(c));
+async function fetchRates(force){
+  if (!force && Date.now() - RATES.at < 6 * 3600e3 && Object.keys(RATES.kzt).length) return false;
+  if (!navigator.onLine) return false;
+  const tries = [
+    async () => { const r = await fetch("https://open.er-api.com/v6/latest/KZT"); const j = await r.json(); if (j.result !== "success") throw 0; const k = {}; for (const c of Object.keys(CURS)) if (c !== "KZT" && j.rates[c]) k[c] = 1 / j.rates[c]; return {kzt: k, at: Date.now(), src: "open.er-api.com", day: (j.time_last_update_utc || "").slice(5, 16)}; },
+    async () => { const r = await fetch("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/kzt.json"); const j = await r.json(); const k = {}; for (const c of Object.keys(CURS)) { const v = j.kzt && j.kzt[c.toLowerCase()]; if (c !== "KZT" && v) k[c] = 1 / v; } if (!Object.keys(k).length) throw 0; return {kzt: k, at: Date.now(), src: "currency-api", day: j.date || ""}; }
+  ];
+  for (const t of tries) { try { RATES = await t(); lsSet(RATE_KEY, JSON.stringify(RATES)); return true; } catch {} }
+  return false;
+}
+// tenge value of a transaction's account-side amount (rate fixed at the moment it was written)
+const txKZT = t => { const c = accCur(t.acc); return c === "KZT" ? t.a : t.a * (t.r || rate(c) || 0); };
+
 function balances(){
   const b = {};
   for (const a of S.settings.accounts) b[a.id] = +a.initial || 0;
@@ -374,14 +408,14 @@ function balances(){
   for (const t of allTx()) {
     if (t.t === "exp") add(t.acc, -t.a);
     else if (t.t === "inc") add(t.acc, t.a);
-    else if (t.t === "tr") { add(t.acc, -t.a); add(t.to, t.a); }
+    else if (t.t === "tr") { add(t.acc, -t.a); add(t.to, t.ta ?? t.a); }
     else if (t.t === "goal") add(t.acc, -(t.gd || 1) * t.a);
     else if (t.t === "debt") add(t.acc, (t.s || 1) * t.a);
   }
   return b;
 }
-const totalBalance = () => Object.values(balances()).reduce((a, b) => a + b, 0);
-function goalSaved(g){ let s = +g.start || 0; for (const t of allTx()) if (t.t === "goal" && t.g === g.id) s += (t.gd || 1) * t.a; return s; }
+const totalBalance = () => { const b = balances(); return S.settings.accounts.reduce((s, a) => s + toKZT(b[a.id], a.cur), 0); };
+function goalSaved(g){ let s = +g.start || 0; for (const t of allTx()) if (t.t === "goal" && t.g === g.id) s += (t.gd || 1) * (t.ga ?? t.a); return s; }
 function debtRepaid(d){ let s = 0; for (const t of allTx()) if (t.t === "debt" && t.d === d.id && t.rep) s += t.a; return s; }
 
 function monthStats(k){
@@ -390,11 +424,12 @@ function monthStats(k){
   const byCat = {}, byDay = {};
   for (const t of txs) {
     if (t.t === "exp") {
-      exp += t.a; byCat[t.c] = (byCat[t.c] || 0) + t.a;
-      const d = +t.date.slice(8, 10); byDay[d] = (byDay[d] || 0) + t.a;
-      const c = cat(t.c); if (c && c.group === "need") need += t.a; else want += t.a;
-    } else if (t.t === "inc") inc += t.a;
-    else if (t.t === "goal") sav += (t.gd || 1) * t.a;
+      const v = txKZT(t);
+      exp += v; byCat[t.c] = (byCat[t.c] || 0) + v;
+      const d = +t.date.slice(8, 10); byDay[d] = (byDay[d] || 0) + v;
+      const c = cat(t.c); if (c && c.group === "need") need += v; else want += v;
+    } else if (t.t === "inc") inc += txKZT(t);
+    else if (t.t === "goal") sav += (t.gd || 1) * (t.acc ? txKZT(t) : toKZT(t.ga ?? t.a, goalCur(goal(t.g))));
   }
   return {inc, exp, sav, need, want, byCat, byDay, txs};
 }
@@ -489,6 +524,7 @@ function loadLocalData(){
 }
 async function boot(){
   applyTheme(); loadMeta(); loadLocalData();
+  fetchRates().then(ok => { if (ok && mode !== "auth") render(); });
   if (!hasCloud()) { mode = "local"; render(); return; }
   sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth: {persistSession: true, autoRefreshToken: true, detectSessionInUrl: true}});
   sb.auth.onAuthStateChange((ev, s) => {
@@ -531,7 +567,7 @@ function subscribeRealtime(){
       if (mode === "cloud" && p.new && applyRemote([p.new])) render();
     }).subscribe();
 }
-window.addEventListener("online", () => { pull(); });
+window.addEventListener("online", () => { pull(); fetchRates().then(ok => { if (ok && mode !== "auth") render(); }); });
 window.addEventListener("offline", () => { if (mode === "cloud") setSync("offline"); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pull(); });
 async function signOut(){
@@ -663,11 +699,14 @@ function txAmount(t){
   let sign = 0;
   if (t.t === "exp") sign = -1; else if (t.t === "inc") sign = 1; else if (t.t === "debt") sign = t.acc ? (t.s || 1) : 0; else if (t.t === "goal") sign = t.acc ? -(t.gd || 1) : 0;
   const cls = sign > 0 ? "pos" : "";
-  return `<span class="amt num ${cls}">${sign ? fmtS(sign * t.a) : fmt(t.a)}</span>`;
+  const c = t.t === "goal" && !t.acc ? goalCur(goal(t.g)) : accCur(t.acc);
+  const v = t.t === "goal" && !t.acc ? (t.ga ?? t.a) : t.a;
+  const kz = c !== "KZT" && (t.t === "exp" || t.t === "inc") ? `<span class="s" style="display:block;font-weight:400">≈ ${fmt(txKZT(t))}</span>` : "";
+  return `<span class="amt num ${cls}">${sign ? fmtCS(sign * v, c) : fmtC(v, c)}${kz}</span>`;
 }
 function txRow(t){
   const a = acc(t.acc);
-  const sub = [t.t === "tr" ? "Аударым" : a ? a.name : "", t.n].filter(Boolean).map(esc).join(" · ");
+  const sub = [t.t === "tr" ? "Аударым" + (t.ta != null && accCur(t.to) !== accCur(t.acc) ? " → " + fmtC(t.ta, accCur(t.to)) : "") : a ? a.name : "", t.n].filter(Boolean).map(esc).join(" · ");
   return `<button class="row" data-act="editTx" data-id="${esc(t.id)}" data-m="${mkey(t.date)}"><span class="ico">${esc(txIcon(t))}</span><span class="mid"><span class="t" style="display:block">${esc(txTitle(t))}</span><span class="s" style="display:block">${sub || "&nbsp;"}</span></span>${txAmount(t)}</button>`;
 }
 const sortTx = arr => arr.slice().sort((a, b) => b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0));
@@ -677,7 +716,7 @@ function dueRecurring(){
   return S.settings.recurring.filter(r => r.last !== k && Math.min(r.day, dim) - day <= 3).sort((a, b) => a.day - b.day);
 }
 function vHome(){
-  const k = curMonth(), st = monthStats(k), bal = balances(), total = Object.values(bal).reduce((a, b) => a + b, 0);
+  const k = curMonth(), st = monthStats(k), bal = balances(), total = totalBalance();
   const dim = daysIn(k), day = new Date().getDate(), left = dim - day + 1;
   const free = st.inc - st.exp - Math.max(0, st.sav);
   let dayLine;
@@ -685,12 +724,12 @@ function vHome(){
   else if (free > 0) dayLine = `<span>Бүгін жұмсауға болады</span><b class="num">≈ ${fmt(free / left)}</b><span style="opacity:.8">· айдың соңына ${left} күн</span>`;
   else dayLine = `<span>Бұл айда шығын кірістен ${fmt(-free)} асып кетті.</span>`;
 
-  const accs = S.settings.accounts.map(a => `<button class="acc" data-act="editAcc" data-id="${esc(a.id)}"><span class="ic">${esc(a.icon)}</span><small>${esc(a.name)}</small><b class="num ${bal[a.id] < 0 ? "neg" : ""}">${fmt(bal[a.id])}</b></button>`).join("") + `<button class="acc add" data-act="editAcc">+ Шот</button>`;
+  const accs = S.settings.accounts.map(a => `<button class="acc" data-act="editAcc" data-id="${esc(a.id)}"><span class="ic">${esc(a.icon)}</span><small>${esc(a.name)}</small><b class="num ${bal[a.id] < 0 ? "neg" : ""}">${fmtC(bal[a.id], a.cur)}</b>${a.cur && a.cur !== "KZT" ? `<small class="num">${rate(a.cur) ? "≈ " + fmt(toKZT(bal[a.id], a.cur)) : "бағам жоқ"}</small>` : ""}</button>`).join("") + `<button class="acc add" data-act="editAcc">+ Шот</button>`;
 
   const notes = [];
   for (const r of dueRecurring()) {
     const late = r.day < day;
-    notes.push(`<div class="note ${late ? "warn" : ""}"><span class="ico">${esc((cat(r.c) || {}).icon || "🔔")}</span><div class="mid"><b>${esc(r.name)}</b> · <span class="num">${fmt(r.a)}</span><div class="small muted">${late ? "Мерзімі өтті: " : "Төлем күні: "}${r.day}-${MONTHS[+k.slice(5)-1].toLowerCase()}</div></div><div class="btns"><button class="btn sm primary" data-act="payRec" data-id="${esc(r.id)}">${r.type === "inc" ? "Түсті" : "Төледім"}</button><button class="btn sm ghost" data-act="skipRec" data-id="${esc(r.id)}">Өткізу</button></div></div>`);
+    notes.push(`<div class="note ${late ? "warn" : ""}"><span class="ico">${esc((cat(r.c) || {}).icon || "🔔")}</span><div class="mid"><b>${esc(r.name)}</b> · <span class="num">${fmtC(r.a, accCur(r.acc))}</span><div class="small muted">${late ? "Мерзімі өтті: " : "Төлем күні: "}${r.day}-${MONTHS[+k.slice(5)-1].toLowerCase()}</div></div><div class="btns"><button class="btn sm primary" data-act="payRec" data-id="${esc(r.id)}">${r.type === "inc" ? "Түсті" : "Төледім"}</button><button class="btn sm ghost" data-act="skipRec" data-id="${esc(r.id)}">Өткізу</button></div></div>`);
   }
   for (const [cid, lim] of Object.entries(S.settings.budgets)) {
     const spent = st.byCat[cid] || 0, c = cat(cid);
@@ -710,7 +749,7 @@ function vHome(){
   return `<div class="stack">
   <section class="hero"><div class="lbl">Барлық шоттарда</div><div class="big num">${fmt(total)}</div>
     <div class="hero-row"><div><small>Кіріс · ${MSHORT[+k.slice(5)-1]}</small><b class="num">${fmt(st.inc)}</b></div><div><small>Шығын</small><b class="num">${fmt(st.exp)}</b></div><div><small>Жинаққа</small><b class="num">${fmt(st.sav)}</b></div></div>
-    <div class="hero-day">${dayLine}</div></section>
+    <div class="hero-day">${dayLine}</div>${usedCurs().length ? `<div class="hero-day small" style="opacity:.85;margin-top:6px">${usedCurs().map(c => rate(c) ? `1 ${sym(c)} = ${nf2.format(Math.round(rate(c) * 100) / 100)} ₸` : `${c}: бағам жоқ`).join(" · ")}</div>` : ""}</section>
   <section class="section"><div class="sec-h"><h2>Шоттар</h2><button class="link" data-act="newTx" data-type="tr">Аудару</button></div><div class="hscroll">${accs}</div></section>
   ${notes.length ? `<section class="section"><div class="sec-h"><h2>Назар аударыңыз</h2></div>${notes.join("")}</section>` : ""}
   ${onboarding}
@@ -860,22 +899,22 @@ function goalCalc(g){
   const yearly = i > 0 ? s * (Math.pow(1 + i, 12) - 1) : 0;
   // pace: average contribution over last 3 months
   let contrib = 0; const since = shiftMonth(curMonth(), -2);
-  for (const t of allTx()) if (t.t === "goal" && t.g === g.id && mkey(t.date) >= since) contrib += (t.gd || 1) * t.a;
+  for (const t of allTx()) if (t.t === "goal" && t.g === g.id && mkey(t.date) >= since) contrib += (t.gd || 1) * (t.ga ?? t.a);
   const pace = contrib / 3;
   return {s, rest, p, perMonth, months, yearly, pace};
 }
 function vGoals(){
   const gs = S.settings.goals;
-  const total = gs.reduce((a, g) => a + goalSaved(g), 0);
-  const cards = gs.map(g => { const c = goalCalc(g);
+  const total = gs.reduce((a, g) => a + toKZT(goalSaved(g), goalCur(g)), 0);
+  const cards = gs.map(g => { const c = goalCalc(g), gc = goalCur(g), F = n => fmtC(n, gc);
     let status = "";
     if (c.rest <= 0) status = `<span class="pill ok">✓ Жиналды</span>`;
     else if (c.perMonth !== null && c.pace > 0) status = c.pace >= c.perMonth ? `<span class="pill ok">Жоспар бойынша</span>` : `<span class="pill warn">Артта қалып барады</span>`;
     else if (g.deadline && g.deadline < today()) status = `<span class="pill bad">Мерзімі өтті</span>`;
-    return `<section class="card goal"><div class="goal-top"><span class="ico">${esc(g.icon)}</span><div style="flex:1;min-width:0"><h3>${esc(g.name)}</h3><div class="small muted">${g.rate ? `Депозит · жылдық ${esc(String(g.rate).replace(".", ","))}%` : "Жинақ"}${g.deadline ? ` · ${esc(g.deadline.split("-").reverse().join("."))} дейін` : ""}</div></div>${status}</div>
-      <div class="goal-nums"><b class="num">${fmt(c.s)}</b><span class="muted num">/ ${fmt(g.target)} · ${Math.round(c.p)}%</span></div>
+    return `<section class="card goal"><div class="goal-top"><span class="ico">${esc(g.icon)}</span><div style="flex:1;min-width:0"><h3>${esc(g.name)}</h3><div class="small muted">${g.rate ? `Депозит · жылдық ${esc(String(g.rate).replace(".", ","))}%` : "Жинақ"}${gc !== "KZT" ? " · " + esc(CURS[gc] ? CURS[gc][1] : gc) : ""}${g.deadline ? ` · ${esc(g.deadline.split("-").reverse().join("."))} дейін` : ""}</div></div>${status}</div>
+      <div class="goal-nums"><b class="num">${F(c.s)}</b><span class="muted num">/ ${F(g.target)} · ${Math.round(c.p)}%</span></div>${gc !== "KZT" ? `<div class="small muted num" style="margin-top:-6px">${rate(gc) ? `≈ ${fmt(toKZT(c.s, gc))} · бүгінгі бағаммен (1 ${sym(gc)} = ${nf2.format(Math.round(rate(gc) * 100) / 100)} ₸)` : "Бағам жүктелмеді — «Тағы → Валюта бағамы»"}</div>` : ""}
       <div class="bar thick"><i style="width:${c.p}%"></i></div>
-      <div class="goal-meta">${c.rest > 0 ? `<span>Қалды: <b class="num">${fmt(c.rest)}</b></span>` : ""}${c.perMonth ? `<span>Айына салу керек: <b class="num">${fmt(c.perMonth)}</b></span>` : ""}${c.pace > 0 ? `<span>Соңғы 3 ай орташа: <b class="num">${fmt(c.pace)}</b></span>` : ""}${c.yearly > 0 ? `<span>Жылына пайыз ≈ <b class="num pos">+${fmt(c.yearly)}</b></span>` : ""}</div>
+      <div class="goal-meta">${c.rest > 0 ? `<span>Қалды: <b class="num">${F(c.rest)}</b></span>` : ""}${c.perMonth ? `<span>Айына салу керек: <b class="num">${F(c.perMonth)}</b>${gc !== "KZT" && rate(gc) ? ` (≈ ${fmt(toKZT(c.perMonth, gc))})` : ""}</span>` : ""}${c.pace > 0 ? `<span>Соңғы 3 ай орташа: <b class="num">${F(c.pace)}</b></span>` : ""}${c.yearly > 0 ? `<span>Жылына пайыз ≈ <b class="num pos">+${F(c.yearly)}</b></span>` : ""}</div>
       <div class="btns"><button class="btn primary sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="1">${I.plus} Салу</button><button class="btn sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="-1">Алу</button>${g.rate ? `<button class="btn sm ghost" data-act="goalInterest" data-id="${esc(g.id)}">Пайыз түсті</button>` : ""}<button class="btn sm ghost" data-act="editGoal" data-id="${esc(g.id)}">Өзгерту</button></div></section>`; }).join("");
   return `<div class="stack">
     <div class="kpis" style="grid-template-columns:repeat(2,1fr)"><div class="kpi"><small>Барлық жинақ</small><b class="num">${fmt(total)}</b></div><div class="kpi"><small>Осы айда салынды</small><b class="num">${fmt(monthStats(curMonth()).sav)}</b></div></div>
@@ -887,11 +926,12 @@ function vGoals(){
 
 /* ---------- views: more ---------- */
 function vMore(){
-  if (ui.sub) return ({accounts: vAccounts, budgets: vBudgets, recurring: vRecurring, debts: vDebts, cats: vCats, settings: vSettings, tips: vTips}[ui.sub] || (() => ""))();
+  if (ui.sub) return ({accounts: vAccounts, budgets: vBudgets, recurring: vRecurring, debts: vDebts, cats: vCats, settings: vSettings, tips: vTips, rates: vRates}[ui.sub] || (() => ""))();
   const it = (sub, ic, t, s) => `<button class="row" data-act="goSub" data-sub="${sub}"><span class="ico">${ic}</span><span class="mid"><span class="t" style="display:block">${t}</span><span class="s" style="display:block">${s}</span></span><span class="chev">${I.right}</span></button>`;
   const openD = S.settings.debts.filter(d => !d.closed).length;
   return `<div class="stack"><section class="card menu list">
     ${it("accounts", "💳", "Шоттар", S.settings.accounts.length + " шот · " + fmt(totalBalance()))}
+    ${it("rates", "💱", "Валюта бағамы", usedCurs().length ? usedCurs().map(c => rate(c) ? `1 ${sym(c)} = ${nf2.format(Math.round(rate(c) * 100) / 100)} ₸` : c + ": бағам жоқ").join(" · ") : "Доллар, еуро, рубль → теңге")}
     ${it("budgets", "🎚️", "Айлық лимиттер", "Санаттарға шек қою")}
     ${it("recurring", "🔔", "Тұрақты төлемдер", S.settings.recurring.length ? S.settings.recurring.length + " төлем" : "Пәтер, интернет, жазылымдар")}
     ${it("debts", "🤝", "Қарыздар", openD ? openD + " ашық қарыз" : "Кімге бердім, кімнен алдым")}
@@ -903,7 +943,7 @@ function vMore(){
 const backBar = t => `<div class="sec-h" style="justify-content:flex-start;gap:8px"><button class="x" data-act="goSub" data-sub="" aria-label="Артқа">${I.left}</button><h2 style="font-size:18px">${t}</h2></div>`;
 function vAccounts(){
   const b = balances();
-  return `<div class="stack">${backBar("Шоттар")}<section class="card list">${S.settings.accounts.map(a => `<button class="row" data-act="editAcc" data-id="${esc(a.id)}"><span class="ico">${esc(a.icon)}</span><span class="mid"><span class="t" style="display:block">${esc(a.name)}</span><span class="s" style="display:block">Бастапқы: ${fmt(a.initial)}</span></span><span class="amt num ${b[a.id] < 0 ? "neg" : ""}">${fmt(b[a.id])}</span></button>`).join("")}</section><div class="btns"><button class="btn primary" data-act="editAcc">${I.plus} Шот қосу</button><button class="btn" data-act="newTx" data-type="tr">Шоттар арасында аудару</button></div></div>`;
+  return `<div class="stack">${backBar("Шоттар")}<section class="card list">${S.settings.accounts.map(a => `<button class="row" data-act="editAcc" data-id="${esc(a.id)}"><span class="ico">${esc(a.icon)}</span><span class="mid"><span class="t" style="display:block">${esc(a.name)}</span><span class="s" style="display:block">${esc(CURS[a.cur || "KZT"] ? CURS[a.cur || "KZT"][1] : a.cur)} · бастапқы: ${fmtC(a.initial, a.cur)}</span></span><span class="amt num ${b[a.id] < 0 ? "neg" : ""}">${fmtC(b[a.id], a.cur)}${a.cur && a.cur !== "KZT" && rate(a.cur) ? `<span class="s" style="display:block;font-weight:400">≈ ${fmt(toKZT(b[a.id], a.cur))}</span>` : ""}</span></button>`).join("")}</section><div class="btns"><button class="btn primary" data-act="editAcc">${I.plus} Шот қосу</button><button class="btn" data-act="newTx" data-type="tr">Шоттар арасында аудару</button></div></div>`;
 }
 function vBudgets(){
   const st = monthStats(curMonth());
@@ -939,6 +979,19 @@ function vTips(){
     <li><b>Ай сайын 10 минут.</b> Ай соңында «Талдау» бетін ашып, бір санатты таңдап, келесі айға лимит қойыңыз.</li>
   </ol><p class="small muted" style="margin:12px 0 0">Бұл жалпы кеңестер, жеке қаржылық кеңес емес. Нақты депозит не несие шарттарын банктен тексеріңіз.</p></section></div>`;
 }
+function vRates(){
+  const used = usedCurs(), list = [...used, ...Object.keys(CURS).filter(c => c !== "KZT" && !used.includes(c))];
+  const upd = RATES.at ? new Date(RATES.at) : null;
+  const when = upd ? `${upd.getDate()} ${MONTHS[upd.getMonth()].toLowerCase()}, ${pad(upd.getHours())}:${pad(upd.getMinutes())}` : "әлі жүктелмеген";
+  const rows = list.map(c => { const m = RATES.kzt[c], o = S.settings.rates[c];
+    return `<div style="display:grid;grid-template-columns:1fr 130px;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)"><div style="min-width:0"><div style="font-weight:600">${esc(sym(c))} ${esc(CURS[c][1])}${used.includes(c) ? ` <span class="pill ok" style="margin-left:4px">қолданылады</span>` : ""}</div><div class="small muted num">Нарық: ${m ? "1 " + esc(sym(c)) + " = " + nf2.format(Math.round(m * 100) / 100) + " ₸" : "жоқ"}${o ? ` · <b style="color:var(--text)">сіздің бағамыңыз қолданылады</b>` : ""}</div></div><input class="inp num" id="rate-${c}" data-rate="${c}" inputmode="decimal" placeholder="${m ? nf2.format(Math.round(m * 100) / 100) : "Бағам"}" value="${o || ""}" aria-label="${esc(CURS[c][1])} бағамы, ₸"></div>`; }).join("");
+  return `<div class="stack">${backBar("Валюта бағамы")}
+    <p class="small muted" style="margin:0">Долларлық немесе басқа валютадағы шот пен мақсаттар теңгеге осы бағаммен есептеледі. Нарық бағамы интернеттен күніне бірнеше рет өзі жаңарады. Банктің бағамы басқаша болса, оң жаққа өзіңіз жазыңыз, бос қалдырсаңыз нарық бағамы қолданылады.</p>
+    <div class="note"><div class="mid small">Соңғы жаңарту: <b>${esc(when)}</b>${RATES.src ? ` · ${esc(RATES.src)}` : ""}</div><button class="btn sm" data-act="refreshRates">Жаңарту</button></div>
+    <section class="card">${rows}</section>
+    <p class="small muted" style="margin:0">Шығын мен кіріс жазылған күнгі бағаммен сақталады, сондықтан өткен айлардың талдауы бағам өзгерсе де өзгермейді. Шот қалдығы мен жинақ бүгінгі бағаммен көрсетіледі.</p>
+  </div>`;
+}
 function vSettings(){
   const p = themePref();
   const seg = [["system","Жүйе"],["light","Жарық"],["dark","Қараңғы"]].map(([v, l]) => `<button data-act="theme" data-v="${v}" aria-pressed="${p === v}">${l}</button>`).join("");
@@ -973,7 +1026,9 @@ function toast(msg){
   if (!el) { el = document.createElement("div"); el.id = "toast"; el.setAttribute("role", "status"); el.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100% - 32px);box-shadow:var(--shadow)"; document.body.appendChild(el); }
   el.textContent = msg; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => { el.hidden = true; }, 2800);
 }
-const accOptions = (sel, allowNone, noneLabel) => (allowNone ? `<option value="">${noneLabel || "Шотсыз"}</option>` : "") + S.settings.accounts.map(a => `<option value="${esc(a.id)}" ${a.id === sel ? "selected" : ""}>${esc(a.icon + " " + a.name)}</option>`).join("");
+const accOptions = (sel, allowNone, noneLabel) => (allowNone ? `<option value="">${noneLabel || "Шотсыз"}</option>` : "") + S.settings.accounts.map(a => `<option value="${esc(a.id)}" ${a.id === sel ? "selected" : ""}>${esc(a.icon + " " + a.name + (a.cur && a.cur !== "KZT" ? " (" + sym(a.cur) + ")" : ""))}</option>`).join("");
+const curOptions = sel => Object.keys(CURS).map(c => `<option value="${c}" ${c === (sel || "KZT") ? "selected" : ""}>${esc(sym(c) + " " + CURS[c][1])}</option>`).join("");
+const convert = (n, from, to) => { const a = rate(from), b = rate(to); return a && b ? n * a / b : null; };
 const defAcc = () => (acc(ui.lastAcc) ? ui.lastAcc : (S.settings.accounts[0] || {}).id || "");
 
 /* transaction editor */
@@ -981,17 +1036,22 @@ function openTx(existing, type){
   const t = existing ? {...existing} : {id: uid(), t: type || "exp", a: "", c: null, acc: defAcc(), to: "", date: today(), n: ""};
   const prevKey = existing ? mkey(existing.date) : null;
   if (existing && (t.t === "goal" || t.t === "debt")) {
-    openSheet(txTitle(t), `<div class="note"><span class="ico">${esc(txIcon(t))}</span><div class="mid"><b class="num">${fmt(t.a)}</b><div class="small muted">${esc(t.date)}${t.n ? " · " + esc(t.n) : ""}</div></div></div><p class="small muted" style="margin:0">Бұл операция ${t.t === "goal" ? "мақсатпен" : "қарызбен"} байланысты. Өшірсеңіз, ${t.t === "goal" ? "мақсаттағы сома" : "қарыз қалдығы"} мен шот қалдығы қайта есептеледі.</p><button class="btn danger block" id="tx-del">Операцияны өшіру</button>`, b => {
+    openSheet(txTitle(t), `<div class="note"><span class="ico">${esc(txIcon(t))}</span><div class="mid"><b class="num">${t.acc ? fmtC(t.a, accCur(t.acc)) : fmtC(t.ga ?? t.a, goalCur(goal(t.g)))}</b><div class="small muted">${esc(t.date)}${t.n ? " · " + esc(t.n) : ""}</div></div></div><p class="small muted" style="margin:0">Бұл операция ${t.t === "goal" ? "мақсатпен" : "қарызбен"} байланысты. Өшірсеңіз, ${t.t === "goal" ? "мақсаттағы сома" : "қарыз қалдығы"} мен шот қалдығы қайта есептеледі.</p><button class="btn danger block" id="tx-del">Операцияны өшіру</button>`, b => {
       $("#tx-del", b).onclick = e => armDelete(e.currentTarget, () => { removeTx(existing); closeSheet(); toast("Өшірілді"); });
     });
     return;
   }
+  let taTouched = existing && existing.ta != null;
   const draw = () => {
     const cats = S.settings.cats.filter(c => c.type === (t.t === "inc" ? "inc" : "exp"));
+    if (t.t === "tr" && (!t.to || t.to === t.acc)) t.to = (S.settings.accounts.find(a => a.id !== t.acc) || {}).id || "";
+    const c1 = accCur(t.acc), c2 = accCur(t.to), cross = t.t === "tr" && c1 !== c2;
+    if (cross && !taTouched) { const v = convert(parseAmt(t.a), c1, c2); t.ta = v && isFinite(v) ? Math.round(v * 100) / 100 : ""; }
     const body = `
       <div class="seg" role="group" aria-label="Түрі">${[["exp","Шығын"],["inc","Кіріс"],["tr","Аударым"]].map(([v, l]) => `<button data-ttype="${v}" aria-pressed="${t.t === v}">${l}</button>`).join("")}</div>
-      <div class="field"><label for="tx-amt">Сома, ₸</label><input class="inp big num" id="tx-amt" inputmode="decimal" autocomplete="off" placeholder="0" value="${t.a === "" ? "" : esc(t.a)}"></div>
-      ${t.t === "tr" ? `<div class="frow"><div class="field"><label for="tx-acc">Қайдан</label><select class="inp" id="tx-acc">${accOptions(t.acc)}</select></div><div class="field"><label for="tx-to">Қайда</label><select class="inp" id="tx-to">${accOptions(t.to || (S.settings.accounts.find(a => a.id !== t.acc) || {}).id)}</select></div></div>`
+      <div class="field"><label for="tx-amt">${cross ? "Шоттан кетеді" : "Сома"}, ${esc(sym(c1))}</label><input class="inp big num" id="tx-amt" inputmode="decimal" autocomplete="off" placeholder="0" value="${t.a === "" ? "" : esc(t.a)}">${!cross && c1 !== "KZT" && t.t !== "tr" ? `<span class="small muted" id="tx-kzt"></span>` : ""}</div>
+      ${t.t === "tr" ? `<div class="frow"><div class="field"><label for="tx-acc">Қайдан</label><select class="inp" id="tx-acc">${accOptions(t.acc)}</select></div><div class="field"><label for="tx-to">Қайда</label><select class="inp" id="tx-to">${accOptions(t.to)}</select></div></div>
+         ${cross ? `<div class="field"><label for="tx-ta">Шотқа түседі, ${esc(sym(c2))}</label><input class="inp big num" id="tx-ta" inputmode="decimal" placeholder="0" value="${t.ta === "" || t.ta == null ? "" : esc(t.ta)}"><span class="small muted" id="tx-rate">Банктің нақты сомасын жазыңыз — бағам өзі есептеледі.</span></div>` : ""}`
       : `<div class="field"><span class="flabel">Санат</span><div class="catgrid">${cats.map(c => `<button class="cat" data-cat="${esc(c.id)}" aria-pressed="${t.c === c.id}"><span>${esc(c.icon)}</span><span>${esc(c.name)}</span></button>`).join("")}</div></div>
          <div class="field"><label for="tx-acc">Шот</label><select class="inp" id="tx-acc">${accOptions(t.acc)}</select></div>`}
       <div class="frow"><div class="field"><label for="tx-date">Күні</label><input class="inp" type="date" id="tx-date" value="${esc(t.date)}" max="${shiftMonth(curMonth(), 12)}-28"></div><div class="field"><label for="tx-note">Ескертпе</label><input class="inp" id="tx-note" placeholder="Міндетті емес" value="${esc(t.n || "")}"></div></div>
@@ -999,7 +1059,16 @@ function openTx(existing, type){
       <button class="btn primary block" id="tx-save">${existing ? "Сақтау" : "Қосу"}</button>
       ${existing ? `<button class="btn danger block" id="tx-del">Өшіру</button>` : ""}`;
     openSheet(existing ? "Операцияны өзгерту" : "Жаңа операция", body, b => {
-      const read = () => { t.a = $("#tx-amt", b).value; t.acc = $("#tx-acc", b).value; t.date = $("#tx-date", b).value || today(); t.n = $("#tx-note", b).value.trim(); const to = $("#tx-to", b); if (to) t.to = to.value; };
+      const read = () => { t.a = $("#tx-amt", b).value; t.acc = $("#tx-acc", b).value; t.date = $("#tx-date", b).value || today(); t.n = $("#tx-note", b).value.trim(); const to = $("#tx-to", b); if (to) t.to = to.value; const ta = $("#tx-ta", b); if (ta) t.ta = ta.value; };
+      const hint = () => {
+        const a = parseAmt($("#tx-amt", b).value), kz = $("#tx-kzt", b), rt = $("#tx-rate", b), ta = $("#tx-ta", b);
+        if (kz) kz.textContent = a > 0 && rate(c1) ? "≈ " + fmt(a * rate(c1)) + " (1 " + sym(c1) + " = " + nf2.format(Math.round(rate(c1) * 100) / 100) + " ₸)" : rate(c1) ? "" : "Бағам жүктелмеді — «Тағы → Валюта бағамы»";
+        if (ta && rt) { const x = parseAmt(ta.value); if (a > 0 && x > 0) { const big = c1 === "KZT" ? a / x : c2 === "KZT" ? x / a : a / x; const lbl = c1 === "KZT" ? `1 ${sym(c2)} = ${nf2.format(Math.round(big * 100) / 100)} ₸` : c2 === "KZT" ? `1 ${sym(c1)} = ${nf2.format(Math.round(big * 100) / 100)} ₸` : `1 ${sym(c2)} = ${nf2.format(Math.round(big * 10000) / 10000)} ${sym(c1)}`; rt.textContent = "Бағам: " + lbl; } }
+      };
+      hint();
+      $("#tx-amt", b).addEventListener("input", () => { const ta = $("#tx-ta", b); if (ta && !taTouched) { const v = convert(parseAmt($("#tx-amt", b).value), c1, c2); ta.value = v && isFinite(v) ? Math.round(v * 100) / 100 : ""; } hint(); });
+      const taEl = $("#tx-ta", b); if (taEl) taEl.addEventListener("input", () => { taTouched = true; hint(); });
+      ["#tx-acc", "#tx-to"].forEach(sel => { const el = $(sel, b); if (el) el.addEventListener("change", () => { read(); taTouched = false; draw(); }); });
       $$("[data-ttype]", b).forEach(x => x.onclick = () => { read(); const nt = x.dataset.ttype; if (nt !== t.t) { if ((nt === "inc") !== (t.t === "inc")) t.c = null; t.t = nt; draw(); } });
       $$("[data-cat]", b).forEach(x => x.onclick = () => { t.c = x.dataset.cat; $$("[data-cat]", b).forEach(y => y.setAttribute("aria-pressed", y === x)); });
       if (!existing) setTimeout(() => { const i = $("#tx-amt", b); if (i && window.matchMedia("(pointer:fine)").matches) i.focus(); }, 60);
@@ -1011,7 +1080,14 @@ function openTx(existing, type){
         if (!t.acc) { err.textContent = "Алдымен шот қосыңыз (Тағы → Шоттар)."; return; }
         if (t.t === "tr" && t.to === t.acc) { err.textContent = "Бір шоттан сол шотқа аударуға болмайды."; return; }
         const rec = {id: t.id, t: t.t, a, acc: t.acc, date: t.date, n: t.n, ts: t.ts};
-        if (t.t === "tr") rec.to = t.to; else rec.c = t.c;
+        if (t.t === "tr") {
+          rec.to = t.to;
+          if (accCur(t.acc) !== accCur(t.to)) { const ta = parseAmt(t.ta); if (!(ta > 0)) { err.textContent = "Шотқа қанша түскенін жазыңыз."; return; } rec.ta = ta; }
+        } else {
+          rec.c = t.c;
+          const cur = accCur(t.acc);
+          if (cur !== "KZT") { const keep = existing && existing.r && existing.acc === t.acc && existing.date === t.date; rec.r = keep ? existing.r : rate(cur) || undefined; if (!rec.r) delete rec.r; }
+        }
         ui.lastAcc = t.acc; lsSet("qalta-lastacc", t.acc);
         upsertTx(rec, prevKey); closeSheet(); toast(existing ? "Сақталды" : "Қосылды");
       };
@@ -1026,7 +1102,8 @@ function openAcc(id){
   const a = id ? acc(id) : null;
   openSheet(a ? "Шотты өзгерту" : "Жаңа шот", `
     <div class="frow" style="grid-template-columns:80px 1fr"><div class="field"><label for="a-icon">Белгі</label><input class="inp" id="a-icon" maxlength="4" value="${esc(a ? a.icon : "💳")}" style="text-align:center;font-size:20px"></div><div class="field"><label for="a-name">Атауы</label><input class="inp" id="a-name" placeholder="Мысалы: Kaspi Gold" value="${esc(a ? a.name : "")}"></div></div>
-    <div class="field"><label for="a-init">Бастапқы қалдық, ₸</label><input class="inp num" id="a-init" inputmode="decimal" value="${a ? esc(a.initial) : ""}" placeholder="0"><span class="small muted">Қосымшаны бастаған кездегі шоттағы сома. Қазіргі қалдық = бастапқы + кіріс − шығын.</span></div>
+    <div class="field"><label for="a-cur">Валюта</label><select class="inp" id="a-cur">${curOptions(a ? a.cur : "KZT")}</select>${a && allTx().some(t => t.acc === a.id || t.to === a.id) ? `<span class="small muted">Валютаны өзгертсеңіз, бұрынғы операциялардың сомасы жаңа валютада саналады.</span>` : `<span class="small muted">Мысалы, долларлық депозит үшін $ таңдаңыз — теңгеге бүгінгі бағаммен есептеледі.</span>`}</div>
+    <div class="field"><label for="a-init">Бастапқы қалдық</label><input class="inp num" id="a-init" inputmode="decimal" value="${a ? esc(a.initial) : ""}" placeholder="0"><span class="small muted">Қосымшаны бастаған кездегі шоттағы сома. Қазіргі қалдық = бастапқы + кіріс − шығын.</span></div>
     ${a ? `<div class="field"><label for="a-now">Немесе қазіргі нақты қалдықты енгізіңіз</label><input class="inp num" id="a-now" inputmode="decimal" placeholder="${esc(Math.round(balances()[a.id]))}"><span class="small muted">Банк қосымшасындағы сомамен теңестіру үшін.</span></div>` : ""}
     <div class="err" id="a-err"></div>
     <button class="btn primary block" id="a-save">Сақтау</button>
@@ -1036,8 +1113,10 @@ function openAcc(id){
       let init = parseAmt($("#a-init", b).value || 0); if (!isFinite(init)) init = 0;
       const nowEl = $("#a-now", b);
       if (a && nowEl && nowEl.value.trim()) { const now = parseAmt(nowEl.value); if (isFinite(now)) init = init + (now - balances()[a.id]); }
-      if (a) Object.assign(a, {name, icon: $("#a-icon", b).value.trim() || "💳", initial: Math.round(init * 100) / 100});
-      else S.settings.accounts.push({id: uid(), name, icon: $("#a-icon", b).value.trim() || "💳", initial: init});
+      const cur = $("#a-cur", b).value || "KZT";
+      if (a) Object.assign(a, {name, icon: $("#a-icon", b).value.trim() || "💳", initial: Math.round(init * 100) / 100, cur});
+      else S.settings.accounts.push({id: uid(), name, icon: $("#a-icon", b).value.trim() || "💳", initial: init, cur});
+      if (cur !== "KZT") fetchRates().then(ok => { if (ok) render(); });
       commitSettings(); closeSheet(); toast("Сақталды");
     };
     const d = $("#a-del", b); if (d) d.onclick = e => armDelete(e.currentTarget, () => { S.settings.accounts = S.settings.accounts.filter(x => x.id !== a.id); commitSettings(); closeSheet(); toast("Шот өшірілді"); });
@@ -1051,8 +1130,9 @@ function openGoal(id){
   openSheet(g ? "Мақсатты өзгерту" : "Жаңа мақсат", `
     <div class="field"><span class="flabel">Белгі</span><div class="chips" id="g-icons">${icons.map(i => `<button class="chip" data-ic="${i}" aria-pressed="${(g ? g.icon : "🎯") === i}" style="font-size:18px">${i}</button>`).join("")}</div></div>
     <div class="field"><label for="g-name">Атауы</label><input class="inp" id="g-name" placeholder="Мысалы: Жаңа ноутбук" value="${esc(g ? g.name : "")}"></div>
-    <div class="frow"><div class="field"><label for="g-target">Керек сома, ₸</label><input class="inp num" id="g-target" inputmode="decimal" value="${g ? esc(g.target) : ""}"></div><div class="field"><label for="g-dl">Мерзімі</label><input class="inp" type="date" id="g-dl" value="${esc(g ? g.deadline || "" : "")}"></div></div>
-    <div class="frow"><div class="field"><label for="g-rate">Депозит %, жылдық</label><input class="inp num" id="g-rate" inputmode="decimal" placeholder="Жоқ" value="${g && g.rate ? esc(g.rate) : ""}"></div><div class="field"><label for="g-start">Қазір жиналғаны, ₸</label><input class="inp num" id="g-start" inputmode="decimal" placeholder="0" value="${g && g.start ? esc(g.start) : ""}"></div></div>
+    <div class="field"><label for="g-cur">Валюта</label><select class="inp" id="g-cur">${curOptions(g ? g.cur : "KZT")}</select><span class="small muted">Долларлық депозит болса, $ таңдаңыз. Сома долларда сақталып, теңгеге бүгінгі бағаммен есептеледі.</span></div>
+    <div class="frow"><div class="field"><label for="g-target">Керек сома</label><input class="inp num" id="g-target" inputmode="decimal" value="${g ? esc(g.target) : ""}"></div><div class="field"><label for="g-dl">Мерзімі</label><input class="inp" type="date" id="g-dl" value="${esc(g ? g.deadline || "" : "")}"></div></div>
+    <div class="frow"><div class="field"><label for="g-rate">Депозит %, жылдық</label><input class="inp num" id="g-rate" inputmode="decimal" placeholder="Жоқ" value="${g && g.rate ? esc(g.rate) : ""}"></div><div class="field"><label for="g-start">Қазір жиналғаны</label><input class="inp num" id="g-start" inputmode="decimal" placeholder="0" value="${g && g.start ? esc(g.start) : ""}"></div></div>
     <span class="small muted">Пайызды көрсетсеңіз, айлық капитализациямен есептейміз. «Қазір жиналғаны» — қосымшаға дейін жинаған сомаңыз.</span>
     <div class="err" id="g-err"></div>
     <button class="btn primary block" id="g-save">Сақтау</button>
@@ -1060,10 +1140,11 @@ function openGoal(id){
     let icon = g ? g.icon : "🎯";
     $$("[data-ic]", b).forEach(x => x.onclick = () => { icon = x.dataset.ic; $$("[data-ic]", b).forEach(y => y.setAttribute("aria-pressed", y === x)); });
     $("#g-save", b).onclick = () => {
-      const name = $("#g-name", b).value.trim(), target = parseAmt($("#g-target", b).value), rate = parseAmt($("#g-rate", b).value || 0), start = parseAmt($("#g-start", b).value || 0);
+      const name = $("#g-name", b).value.trim(), target = parseAmt($("#g-target", b).value), pr = parseAmt($("#g-rate", b).value || 0), start = parseAmt($("#g-start", b).value || 0);
       if (!name) { $("#g-err", b).textContent = "Атауын жазыңыз."; return; }
       if (!(target > 0)) { $("#g-err", b).textContent = "Керек соманы жазыңыз."; return; }
-      const data = {name, icon, target, deadline: $("#g-dl", b).value || "", rate: isFinite(rate) && rate > 0 ? rate : 0, start: isFinite(start) ? start : 0};
+      const data = {name, icon, target, deadline: $("#g-dl", b).value || "", rate: isFinite(pr) && pr > 0 ? pr : 0, start: isFinite(start) ? start : 0, cur: $("#g-cur", b).value || "KZT"};
+      if (data.cur !== "KZT") fetchRates().then(ok => { if (ok) render(); });
       if (g) Object.assign(g, data); else S.settings.goals.push({id: uid(), created: today(), ...data});
       commitSettings(); closeSheet(); toast("Сақталды");
     };
@@ -1072,25 +1153,50 @@ function openGoal(id){
 }
 function openGoalMove(id, dir, interest){
   const g = goal(id); if (!g) return;
+  const gc = goalCur(g), F = n => fmtC(n, gc);
   const title = interest ? "Пайыз түсті" : dir > 0 ? `«${g.name}» мақсатына салу` : `«${g.name}» мақсатынан алу`;
   const c = goalCalc(g);
-  const hint = interest ? "Банк есептеген пайыз сомасын жазыңыз — ол мақсатқа қосылады." : dir > 0 ? (c.perMonth ? `Мерзімге жету үшін айына ${fmt(c.perMonth)} салу керек.` : "") : `Мақсатта ${fmt(c.s)} бар.`;
-  openSheet(title, `
-    <div class="field"><label for="m-amt">Сома, ₸</label><input class="inp big num" id="m-amt" inputmode="decimal" placeholder="0" value="${dir > 0 && !interest && c.perMonth ? Math.ceil(c.perMonth) : ""}"></div>
-    ${interest ? "" : `<div class="field"><label for="m-acc">${dir > 0 ? "Қай шоттан" : "Қай шотқа"}</label><select class="inp" id="m-acc">${accOptions(defAcc(), true, "Шотсыз (сырттан)")}</select></div>`}
-    <div class="field"><label for="m-date">Күні</label><input class="inp" type="date" id="m-date" value="${today()}"></div>
-    ${hint ? `<span class="small muted">${esc(hint)}</span>` : ""}
-    <div class="err" id="m-err"></div>
-    <button class="btn primary block" id="m-save">${dir > 0 ? "Салу" : "Алу"}</button>`, b => {
-    $("#m-save", b).onclick = () => {
-      const a = parseAmt($("#m-amt", b).value);
-      if (!(a > 0)) { $("#m-err", b).textContent = "Соманы енгізіңіз."; return; }
-      if (dir < 0 && a > c.s + 0.01) { $("#m-err", b).textContent = `Мақсатта тек ${fmt(c.s)} бар.`; return; }
-      const accEl = $("#m-acc", b);
-      upsertTx({id: uid(), t: "goal", g: g.id, gd: dir, a, acc: accEl ? accEl.value : "", date: $("#m-date", b).value || today(), n: interest ? "Депозит пайызы" : ""});
-      closeSheet(); toast(dir > 0 ? "Салынды" : "Алынды");
-    };
-  });
+  const hint = interest ? "Банк есептеген пайыз сомасын жазыңыз — ол мақсатқа қосылады." : dir > 0 ? (c.perMonth ? `Мерзімге жету үшін айына ${F(c.perMonth)} салу керек.` : "") : `Мақсатта ${F(c.s)} бар.`;
+  const same = S.settings.accounts.find(a => (a.cur || "KZT") === gc);
+  let accId = interest ? "" : (acc(ui.lastAcc) && accCur(ui.lastAcc) === gc ? ui.lastAcc : same ? same.id : defAcc());
+  let aTouched = false;
+  const draw = () => {
+    const ac = accId ? accCur(accId) : gc, cross = !!accId && ac !== gc;
+    openSheet(title, `
+      <div class="field"><label for="m-amt">${dir > 0 ? "Мақсатқа түседі" : "Мақсаттан алынады"}, ${esc(sym(gc))}</label><input class="inp big num" id="m-amt" inputmode="decimal" placeholder="0" value="${dir > 0 && !interest && c.perMonth ? Math.ceil(c.perMonth * 100) / 100 : ""}"></div>
+      ${interest ? "" : `<div class="field"><label for="m-acc">${dir > 0 ? "Қай шоттан" : "Қай шотқа"}</label><select class="inp" id="m-acc">${accOptions(accId, true, "Шотсыз (сырттан)")}</select></div>`}
+      ${cross ? `<div class="field"><label for="m-acc-amt">${dir > 0 ? "Шоттан кетеді" : "Шотқа түседі"}, ${esc(sym(ac))}</label><input class="inp num" id="m-acc-amt" inputmode="decimal" placeholder="0"><span class="small muted">Бүгінгі бағаммен есептелді. Банктегі нақты соманы жазсаңыз болады.</span></div>` : ""}
+      <div class="field"><label for="m-date">Күні</label><input class="inp" type="date" id="m-date" value="${today()}"></div>
+      ${hint ? `<span class="small muted">${esc(hint)}</span>` : ""}
+      ${gc !== "KZT" ? `<span class="small muted" id="m-kzt"></span>` : ""}
+      <div class="err" id="m-err"></div>
+      <button class="btn primary block" id="m-save">${dir > 0 ? "Салу" : "Алу"}</button>`, b => {
+      const amt = $("#m-amt", b), aa = $("#m-acc-amt", b), kz = $("#m-kzt", b);
+      const sync = () => {
+        const v = parseAmt(amt.value);
+        if (aa && !aTouched) { const x = convert(v, gc, ac); aa.value = v > 0 && x ? Math.round(x * 100) / 100 : ""; }
+        if (kz) kz.textContent = v > 0 && rate(gc) ? `≈ ${fmt(toKZT(v, gc))} бүгінгі бағаммен` : "";
+      };
+      sync();
+      amt.addEventListener("input", sync);
+      if (aa) aa.addEventListener("input", () => { aTouched = true; });
+      const sel = $("#m-acc", b); if (sel) sel.addEventListener("change", () => { accId = sel.value; aTouched = false; const keep = amt.value; draw(); $("#m-amt").value = keep; $("#m-amt").dispatchEvent(new Event("input")); });
+      $("#m-save", b).onclick = () => {
+        const ga = parseAmt(amt.value);
+        if (!(ga > 0)) { $("#m-err", b).textContent = "Соманы енгізіңіз."; return; }
+        if (dir < 0 && ga > c.s + 0.01) { $("#m-err", b).textContent = `Мақсатта тек ${F(c.s)} бар.`; return; }
+        let a = ga;
+        if (cross) { a = parseAmt(aa.value); if (!(a > 0)) { $("#m-err", b).textContent = "Шоттағы соманы жазыңыз."; return; } }
+        const tx = {id: uid(), t: "goal", g: g.id, gd: dir, a, acc: accId, date: $("#m-date", b).value || today(), n: interest ? "Депозит пайызы" : ""};
+        if (cross || !accId) tx.ga = ga;
+        if (accId && ac !== "KZT") tx.r = rate(ac) || undefined;
+        if (!tx.r) delete tx.r;
+        upsertTx(tx);
+        closeSheet(); toast(dir > 0 ? "Салынды" : "Алынды");
+      };
+    });
+  };
+  draw();
 }
 
 /* recurring editor */
@@ -1191,10 +1297,11 @@ function demoState(){
   let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const r = (a, b) => Math.round((a + rnd() * (b - a)) / 10) * 10;
   const st = defaults();
-  st.accounts = [{id: "card", name: "Kaspi Gold", icon: "💳", initial: 84000}, {id: "cash", name: "Қолма-қол", icon: "💵", initial: 95000}, {id: "dep", name: "Депозит", icon: "🏦", initial: 0}];
+  st.accounts = [{id: "card", name: "Kaspi Gold", icon: "💳", initial: 84000}, {id: "cash", name: "Қолма-қол", icon: "💵", initial: 95000}, {id: "dep", name: "Долларлық шот", icon: "🏦", initial: 300, cur: "USD"}];
   st.budgets = {cafe: 30000, taxi: 15000, fun: 20000};
   st.goals = [{id: "g1", name: "Жаңа ноутбук", icon: "💻", target: 450000, deadline: shiftMonth(curMonth(), 5) + "-01", rate: 0, start: 90000, created: today()},
-              {id: "g2", name: "Қауіпсіздік қоры", icon: "🛡️", target: 600000, deadline: shiftMonth(curMonth(), 12) + "-01", rate: 14, start: 150000, created: today()}];
+              {id: "g2", name: "Қауіпсіздік қоры", icon: "🛡️", target: 600000, deadline: shiftMonth(curMonth(), 12) + "-01", rate: 14, start: 150000, created: today()},
+              {id: "g3", name: "Долларлық депозит", icon: "💵", target: 5000, deadline: shiftMonth(curMonth(), 18) + "-01", rate: 1, start: 1200, created: today(), cur: "USD"}];
   st.recurring = [{id: "r1", name: "Пәтер ақысы", a: 120000, day: 1, type: "exp", c: "home", acc: "card", last: ""},
                   {id: "r2", name: "Үй интернеті", a: 6990, day: 10, type: "exp", c: "phone", acc: "card", last: ""},
                   {id: "r3", name: "Музыка жазылымы", a: 1490, day: new Date().getDate() + 1 > 28 ? 28 : new Date().getDate() + 1, type: "exp", c: "subs", acc: "card", last: ""}];
@@ -1293,6 +1400,7 @@ const ACT = {
   wipe: el => armDelete(el, wipe),
   demo: () => enterDemo(),
   exitDemo: () => exitDemo(),
+  refreshRates: async el => { el.disabled = true; el.textContent = "Жүктелуде…"; const ok = await fetchRates(true); toast(ok ? "Бағам жаңартылды" : "Бағамды жүктеу мүмкін болмады. Интернетті тексеріңіз."); render(); },
   login: () => { try { localStorage.removeItem("qalta-skip-auth"); } catch {} mode = "auth"; render(); window.scrollTo(0, 0); },
   logout: el => armDelete(el, signOut)
 };
@@ -1307,6 +1415,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "ops-cat") { ui.opsCat = t.value; render(); }
+  else if (t.dataset && t.dataset.rate) { const v = parseAmt(t.value); if (isFinite(v) && v > 0) S.settings.rates[t.dataset.rate] = v; else delete S.settings.rates[t.dataset.rate]; commitSettings(); }
   else if (t.dataset && t.dataset.bud) { const v = parseAmt(t.value); if (isFinite(v) && v > 0) S.settings.budgets[t.dataset.bud] = v; else delete S.settings.budgets[t.dataset.bud]; commitSettings(); }
   else if (t.id === "import-file") { if (t.files && t.files[0]) doImport(t.files[0]); t.value = ""; }
 });

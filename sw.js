@@ -1,6 +1,6 @@
 // Қалта service worker: қосымшаны интернетсіз ашу үшін файлдарды кэштейді.
 // Жаңа нұсқа шығарғанда VERSION-ды өзгертіңіз.
-const VERSION = "qalta-v1";
+const VERSION = "qalta-v2";
 const CORE = [
   "./",
   "./index.html",
@@ -31,6 +31,8 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   // Supabase API сұраулары әрқашан желіден өтеді
   if (url.hostname.endsWith("supabase.co") || url.hostname.endsWith("supabase.in")) return;
+  // Валюта бағамы әрқашан жаңа болсын (офлайнда қосымша соңғы сақталған бағамды қолданады)
+  if (url.hostname === "open.er-api.com" || url.pathname.includes("currency-api")) return;
 
   // Беттің өзі: алдымен желі (жаңа нұсқа үшін), болмаса кэш
   if (req.mode === "navigate") {
