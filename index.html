@@ -182,6 +182,7 @@ button.row:hover{background:var(--surface-2)}
 .btn.ghost{background:transparent;border:1px solid var(--line)}
 .btn.danger{background:transparent;color:var(--neg);border:1px solid color-mix(in srgb,var(--neg) 35%,transparent)}
 .btn.danger.armed{background:var(--neg);color:#fff}
+.btn.ghost.armed{border-color:var(--accent);color:var(--accent)}
 .btn.sm{padding:7px 12px;font-size:13.5px;border-radius:10px}
 .btn.block{width:100%}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -1049,7 +1050,7 @@ function vSettings(){
   const seg = [["system","Жүйе"],["light","Жарық"],["dark","Қараңғы"]].map(([v, l]) => `<button data-act="theme" data-v="${v}" aria-pressed="${p === v}">${l}</button>`).join("");
   const email = session && session.user ? session.user.email : "";
   const where = mode === "cloud" ? `Сіз <b>${esc(email)}</b> аккаунтымен кірдіңіз. Деректер осы құрылғыда да, серверде де сақталады: интернетсіз жазсаңыз, желі пайда болғанда өзі синхрондалады.` : mode === "demo" ? "Қазір мысал режимі қосулы — ештеңе сақталмайды." : "Деректер тек осы құрылғыда. Телефон мен ноутта бірдей болу үшін аккаунтқа кіріңіз.";
-  const accBtn = mode === "cloud" ? `<button class="btn ghost" data-act="logout">Аккаунттан шығу</button>` : mode === "local" && hasCloud() ? `<button class="btn primary" data-act="login">Аккаунтқа кіру</button>` : "";
+  const accBtn = mode === "cloud" ? `<button class="btn ghost" data-act="logout">Аккаунттан шығу</button><span class="small muted" style="align-self:center">Шықсаңыз, деректер серверде қалады — қайта кіргенде бәрі орнында.</span>` : mode === "local" && hasCloud() ? `<button class="btn primary" data-act="login">Аккаунтқа кіру</button>` : "";
   return `<div class="stack">${backBar("Баптаулар")}
     <section class="card section"><div class="flabel">Тақырып</div><div class="seg">${seg}</div></section>
     <section class="card section"><div class="flabel">Сақтау</div><p style="margin:0" class="small">${where}</p>${accBtn ? `<div class="btns">${accBtn}</div>` : ""}<div class="btns"><button class="btn" data-act="export">Резервтік көшірме жүктеу (.json)</button><button class="btn ghost" data-act="import">Көшірмеден қалпына келтіру</button></div><div class="err" id="io-msg"></div></section>
@@ -1068,9 +1069,9 @@ function openSheet(title, html, mount){
   if (mount) mount($("#sheet-body"));
 }
 function closeSheet(){ $("#sheet").hidden = true; document.body.style.overflow = ""; $("#sheet-body").innerHTML = ""; }
-function armDelete(btn, fn){
+function armDelete(btn, fn, label){
   if (btn.classList.contains("armed")) { fn(); return; }
-  btn.classList.add("armed"); const t = btn.textContent; btn.textContent = "Иә, өшіру";
+  btn.classList.add("armed"); const t = btn.textContent; btn.textContent = label || "Иә, өшіру";
   setTimeout(() => { if (btn.isConnected) { btn.classList.remove("armed"); btn.textContent = t; } }, 3500);
 }
 function toast(msg){
@@ -1658,7 +1659,7 @@ const ACT = {
   exitDemo: () => exitDemo(),
   refreshRates: async el => { el.disabled = true; el.textContent = "Жүктелуде…"; const ok = await fetchRates(true); toast(ok ? "Бағам жаңартылды" : "Бағамды жүктеу мүмкін болмады. Интернетті тексеріңіз."); render(); },
   login: () => { try { localStorage.removeItem("qalta-skip-auth"); } catch {} mode = "auth"; render(); window.scrollTo(0, 0); },
-  logout: el => armDelete(el, signOut)
+  logout: el => armDelete(el, signOut, "Иә, шығу")
 };
 document.addEventListener("click", e => {
   const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
