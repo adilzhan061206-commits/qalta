@@ -133,6 +133,37 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .acc b{font-size:16px}
 .acc.add{display:grid;place-items:center;color:var(--accent);font-weight:600;min-width:110px;border-style:dashed}
 
+/* Budget-OK style bubbles */
+.bubs{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:12px 2px}
+@media (min-width:900px){.bubs{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}}
+.bub{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:14px;min-width:0;color:var(--text);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.bub[data-drag]{touch-action:none;cursor:grab;-webkit-user-drag:none}
+body.dragging *{-webkit-user-select:none;user-select:none}
+.bub-c{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:24px;background:var(--surface);box-shadow:var(--shadow);position:relative;transition:transform .15s}
+.bub.inc .bub-c{background:color-mix(in srgb,var(--pos) 15%,var(--surface))}
+.bub.acc .bub-c{background:color-mix(in srgb,var(--accent) 15%,var(--surface))}
+.bub.add .bub-c{background:transparent;box-shadow:none;border:2px dashed var(--line);color:var(--accent);font-size:22px}
+.bub-c.ring::before{content:"";position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(var(--rc) calc(var(--p) * 1%),var(--line) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3.5px),#000 calc(100% - 3px))}
+.bub-n{font-size:11.5px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}
+.bub-v{font-size:12.5px;font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.bub-v.zero{color:var(--faint);font-weight:500}
+body.dragging{cursor:grabbing}
+body.dragging .bub.target .bub-c{outline:2px dashed var(--faint);outline-offset:4px}
+body.dragging .bub.drop-ok .bub-c{outline:3px solid var(--accent);outline-offset:4px;transform:scale(1.12)}
+.bub.dragging{opacity:.35}
+.ghost{position:fixed;z-index:80;pointer-events:none;width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:var(--surface);box-shadow:0 12px 32px rgba(0,0,0,.35);transform:translate(-50%,-60%) scale(1.08);border:3px solid var(--accent)}
+.drag-hint{font-size:12.5px;color:var(--muted);text-align:center;padding:0 8px}
+/* Split bills */
+.person{display:grid;grid-template-columns:1fr 112px 34px;gap:8px;align-items:center}
+.person.me{grid-template-columns:1fr 112px 34px}
+.person .me-l{font-weight:600;padding-left:4px}
+.chk{display:flex;align-items:center;gap:12px;padding:12px 4px;width:100%;border:0;background:none;text-align:left;border-radius:12px}
+.chk + .chk{border-top:1px solid var(--line)}
+.chk .box{flex:0 0 28px;width:28px;height:28px;border-radius:9px;border:2px solid var(--line);display:grid;place-items:center;color:#fff;transition:background .15s,border-color .15s}
+.chk[aria-checked="true"] .box{background:var(--pos);border-color:var(--pos)}
+.chk[aria-checked="true"] .nm{text-decoration:line-through;color:var(--muted)}
+.chk .nm{flex:1;min-width:0;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* Lists */
 .list{display:flex;flex-direction:column}
 .row{display:flex;align-items:center;gap:12px;padding:10px 4px;border:0;background:none;width:100%;text-align:left;border-radius:12px}
@@ -337,7 +368,9 @@ function defaults(){
     budgets: {},
     goals: [],
     recurring: [],
-    debts: []
+    debts: [],
+    splits: [],
+    rates: {}
   };
 }
 function normalize(s){
@@ -346,6 +379,7 @@ function normalize(s){
   for (const k of ["accounts","cats","goals","recurring","debts"]) if (!Array.isArray(s[k])) s[k] = d[k];
   if (!s.budgets || typeof s.budgets !== "object") s.budgets = {};
   if (!s.rates || typeof s.rates !== "object") s.rates = {};
+  if (!Array.isArray(s.splits)) s.splits = [];
   if (!s.cats.length) s.cats = d.cats;
   if (!s.accounts.length) s.accounts = d.accounts;
   s.v = 1;
@@ -724,6 +758,13 @@ function vHome(){
   else if (free > 0) dayLine = `<span>Бүгін жұмсауға болады</span><b class="num">≈ ${fmt(free / left)}</b><span style="opacity:.8">· айдың соңына ${left} күн</span>`;
   else dayLine = `<span>Бұл айда шығын кірістен ${fmt(-free)} асып кетті.</span>`;
 
+  const incCats = S.settings.cats.filter(c => c.type === "inc"), expCats = S.settings.cats.filter(c => c.type === "exp");
+  const incBy = {}; for (const t of st.txs) if (t.t === "inc") incBy[t.c] = (incBy[t.c] || 0) + txKZT(t);
+  const bubV = (v, txt) => `<span class="bub-v num ${v ? "" : "zero"}">${txt}</span>`;
+  const incB = incCats.map(c => `<button class="bub inc" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(incBy[c.id], fmtK(incBy[c.id] || 0) + " ₸")}</button>`).join("");
+  const accB = S.settings.accounts.map(a => `<button class="bub acc" data-kind="acc" data-id="${esc(a.id)}" data-drag="1" data-act="editAcc"><span class="bub-c">${esc(a.icon)}</span><span class="bub-n">${esc(a.name)}</span><span class="bub-v num ${bal[a.id] < 0 ? "neg" : ""}">${esc(fmtC(bal[a.id], a.cur))}</span></button>`).join("") + `<button class="bub add" data-act="editAcc"><span class="bub-c">+</span><span class="bub-n">Шот қосу</span></button>`;
+  const expB = expCats.map(c => { const v = st.byCat[c.id] || 0, lim = S.settings.budgets[c.id]; const p = lim ? Math.min(100, v / lim * 100) : 0; const rc = lim && v > lim ? "var(--neg)" : p > 80 ? "var(--warn)" : "var(--pos)";
+    return `<button class="bub exp" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c ${lim ? "ring" : ""}" style="${lim ? `--p:${p};--rc:${rc}` : ""}">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(v, fmtK(v) + " ₸")}</button>`; }).join("");
   const accs = S.settings.accounts.map(a => `<button class="acc" data-act="editAcc" data-id="${esc(a.id)}"><span class="ic">${esc(a.icon)}</span><small>${esc(a.name)}</small><b class="num ${bal[a.id] < 0 ? "neg" : ""}">${fmtC(bal[a.id], a.cur)}</b>${a.cur && a.cur !== "KZT" ? `<small class="num">${rate(a.cur) ? "≈ " + fmt(toKZT(bal[a.id], a.cur)) : "бағам жоқ"}</small>` : ""}</button>`).join("") + `<button class="acc add" data-act="editAcc">+ Шот</button>`;
 
   const notes = [];
@@ -750,7 +791,11 @@ function vHome(){
   <section class="hero"><div class="lbl">Барлық шоттарда</div><div class="big num">${fmt(total)}</div>
     <div class="hero-row"><div><small>Кіріс · ${MSHORT[+k.slice(5)-1]}</small><b class="num">${fmt(st.inc)}</b></div><div><small>Шығын</small><b class="num">${fmt(st.exp)}</b></div><div><small>Жинаққа</small><b class="num">${fmt(st.sav)}</b></div></div>
     <div class="hero-day">${dayLine}</div>${usedCurs().length ? `<div class="hero-day small" style="opacity:.85;margin-top:6px">${usedCurs().map(c => rate(c) ? `1 ${sym(c)} = ${nf2.format(Math.round(rate(c) * 100) / 100)} ₸` : `${c}: бағам жоқ`).join(" · ")}</div>` : ""}</section>
-  <section class="section"><div class="sec-h"><h2>Шоттар</h2><button class="link" data-act="newTx" data-type="tr">Аудару</button></div><div class="hscroll">${accs}</div></section>
+  <section class="card section"><div class="sec-h"><h2>Кірістер</h2><span class="small muted num">${fmt(st.inc)}</span></div><div class="bubs">${incB}</div></section>
+  <section class="card section"><div class="sec-h"><h2>Шоттар</h2><span class="small muted num">${fmt(total)}</span></div><div class="bubs">${accB}</div></section>
+  <section class="card section"><div class="sec-h"><h2>Шығындар</h2><button class="link" data-act="newSplit">👥 Счет бөлу</button></div><div class="bubs">${expB}</div></section>
+  <p class="drag-hint">Шотты басып, шығын санатына сүйреңіз — шығын жазылады. Басқа шотқа сүйресеңіз — аударым, кірісті шотқа — табыс.</p>
+  ${splitsHome()}
   ${notes.length ? `<section class="section"><div class="sec-h"><h2>Назар аударыңыз</h2></div>${notes.join("")}</section>` : ""}
   ${onboarding}
   <div class="grid2">
@@ -926,7 +971,7 @@ function vGoals(){
 
 /* ---------- views: more ---------- */
 function vMore(){
-  if (ui.sub) return ({accounts: vAccounts, budgets: vBudgets, recurring: vRecurring, debts: vDebts, cats: vCats, settings: vSettings, tips: vTips, rates: vRates}[ui.sub] || (() => ""))();
+  if (ui.sub) return ({accounts: vAccounts, budgets: vBudgets, recurring: vRecurring, debts: vDebts, cats: vCats, settings: vSettings, tips: vTips, rates: vRates, splits: vSplits}[ui.sub] || (() => ""))();
   const it = (sub, ic, t, s) => `<button class="row" data-act="goSub" data-sub="${sub}"><span class="ico">${ic}</span><span class="mid"><span class="t" style="display:block">${t}</span><span class="s" style="display:block">${s}</span></span><span class="chev">${I.right}</span></button>`;
   const openD = S.settings.debts.filter(d => !d.closed).length;
   return `<div class="stack"><section class="card menu list">
@@ -934,6 +979,7 @@ function vMore(){
     ${it("rates", "💱", "Валюта бағамы", usedCurs().length ? usedCurs().map(c => rate(c) ? `1 ${sym(c)} = ${nf2.format(Math.round(rate(c) * 100) / 100)} ₸` : c + ": бағам жоқ").join(" · ") : "Доллар, еуро, рубль → теңге")}
     ${it("budgets", "🎚️", "Айлық лимиттер", "Санаттарға шек қою")}
     ${it("recurring", "🔔", "Тұрақты төлемдер", S.settings.recurring.length ? S.settings.recurring.length + " төлем" : "Пәтер, интернет, жазылымдар")}
+    ${it("splits", "👥", "Счет бөлу", S.settings.splits.length ? S.settings.splits.filter(sp => !splitInfo(sp).done).length + " ашық счет" : "Кафеде соманы достармен бөлу")}
     ${it("debts", "🤝", "Қарыздар", openD ? openD + " ашық қарыз" : "Кімге бердім, кімнен алдым")}
     ${it("cats", "🏷️", "Санаттар", "Қосу, өзгерту, қажеттілік/қалау")}
     ${it("tips", "📘", "Қаржылық сауаттылық", "Қысқа ережелер мен кеңестер")}
@@ -1032,8 +1078,8 @@ const convert = (n, from, to) => { const a = rate(from), b = rate(to); return a 
 const defAcc = () => (acc(ui.lastAcc) ? ui.lastAcc : (S.settings.accounts[0] || {}).id || "");
 
 /* transaction editor */
-function openTx(existing, type){
-  const t = existing ? {...existing} : {id: uid(), t: type || "exp", a: "", c: null, acc: defAcc(), to: "", date: today(), n: ""};
+function openTx(existing, type, preset){
+  const t = existing ? {...existing} : {id: uid(), t: type || "exp", a: "", c: null, acc: defAcc(), to: "", date: today(), n: "", ...(preset || {})};
   const prevKey = existing ? mkey(existing.date) : null;
   if (existing && (t.t === "goal" || t.t === "debt")) {
     openSheet(txTitle(t), `<div class="note"><span class="ico">${esc(txIcon(t))}</span><div class="mid"><b class="num">${t.acc ? fmtC(t.a, accCur(t.acc)) : fmtC(t.ga ?? t.a, goalCur(goal(t.g)))}</b><div class="small muted">${esc(t.date)}${t.n ? " · " + esc(t.n) : ""}</div></div></div><p class="small muted" style="margin:0">Бұл операция ${t.t === "goal" ? "мақсатпен" : "қарызбен"} байланысты. Өшірсеңіз, ${t.t === "goal" ? "мақсаттағы сома" : "қарыз қалдығы"} мен шот қалдығы қайта есептеледі.</p><button class="btn danger block" id="tx-del">Операцияны өшіру</button>`, b => {
@@ -1057,6 +1103,7 @@ function openTx(existing, type){
       <div class="frow"><div class="field"><label for="tx-date">Күні</label><input class="inp" type="date" id="tx-date" value="${esc(t.date)}" max="${shiftMonth(curMonth(), 12)}-28"></div><div class="field"><label for="tx-note">Ескертпе</label><input class="inp" id="tx-note" placeholder="Міндетті емес" value="${esc(t.n || "")}"></div></div>
       <div class="err" id="tx-err"></div>
       <button class="btn primary block" id="tx-save">${existing ? "Сақтау" : "Қосу"}</button>
+      ${!existing && t.t === "exp" ? `<button class="btn ghost block" id="tx-split">👥 Бірнеше адамға бөлу (счет бөлу)</button>` : ""}
       ${existing ? `<button class="btn danger block" id="tx-del">Өшіру</button>` : ""}`;
     openSheet(existing ? "Операцияны өзгерту" : "Жаңа операция", body, b => {
       const read = () => { t.a = $("#tx-amt", b).value; t.acc = $("#tx-acc", b).value; t.date = $("#tx-date", b).value || today(); t.n = $("#tx-note", b).value.trim(); const to = $("#tx-to", b); if (to) t.to = to.value; const ta = $("#tx-ta", b); if (ta) t.ta = ta.value; };
@@ -1092,10 +1139,207 @@ function openTx(existing, type){
         upsertTx(rec, prevKey); closeSheet(); toast(existing ? "Сақталды" : "Қосылды");
       };
       const del = $("#tx-del", b); if (del) del.onclick = e => armDelete(e.currentTarget, () => { removeTx(existing); closeSheet(); toast("Өшірілді"); });
+      const sp = $("#tx-split", b); if (sp) sp.onclick = () => { read(); openSplit({total: parseAmt(t.a) > 0 ? parseAmt(t.a) : "", c: t.c, acc: t.acc, title: t.n}); };
     });
   };
   draw();
 }
+
+/* ---------- split bills ---------- */
+const splitById = id => S.settings.splits.find(x => x.id === id);
+function splitInfo(sp){
+  const ds = sp.people.map(p => p.d && debt(p.d)).filter(Boolean);
+  const paid = ds.filter(d => d.closed).length;
+  const back = ds.reduce((s, d) => s + debtRepaid(d), 0), owed = ds.reduce((s, d) => s + d.amount, 0);
+  return {ds, paid, count: ds.length, back, owed, done: ds.length > 0 && paid === ds.length};
+}
+function splitRow(sp){
+  const i = splitInfo(sp);
+  const pct = i.owed ? i.back / i.owed * 100 : 100;
+  return `<button class="row" data-act="viewSplit" data-id="${esc(sp.id)}"><span class="ico">👥</span><span class="mid"><span class="t" style="display:block">${esc(sp.title)}</span><span class="s" style="display:block">${esc(dayLabel(sp.date))} · ${sp.payer === "me" ? `${i.paid}/${i.count} қайтарды` : `${esc(sp.payerName)} төледі`}</span><span class="bar" style="display:block;margin-top:6px"><i class="ok" style="width:${pct}%"></i></span></span><span class="amt num">${fmt(sp.total)}${i.done ? `<span class="s" style="display:block;font-weight:400;color:var(--pos)">✓ жабылды</span>` : `<span class="s" style="display:block;font-weight:400">${sp.payer === "me" ? "күтілуде " + fmt(i.owed - i.back) : "қайтару " + fmt(i.owed - i.back)}</span>`}</span></button>`;
+}
+function splitsHome(){
+  const open = S.settings.splits.filter(sp => !splitInfo(sp).done).sort((a, b) => b.date.localeCompare(a.date));
+  if (!open.length) return "";
+  return `<section class="card section"><div class="sec-h"><h2>Бөлінген счеттар</h2><button class="link" data-act="goSub" data-sub="splits">Барлығы</button></div><div class="list">${open.slice(0, 3).map(splitRow).join("")}</div></section>`;
+}
+function vSplits(){
+  const all = S.settings.splits.slice().sort((a, b) => b.date.localeCompare(a.date));
+  return `<div class="stack">${backBar("Счет бөлу")}<p class="small muted" style="margin:0">Кафе, ресторан, такси — жалпы соманы бөліп, кім қайтарғанын белгілеп отырыңыз. Қайтарған адамға ✓ қойсаңыз, ақша шотыңызға түседі.</p><section class="card list">${all.map(splitRow).join("") || `<div class="empty">Әзірге бөлінген счет жоқ.</div>`}</section><button class="btn primary" data-act="newSplit">${I.plus} Жаңа счет</button></div>`;
+}
+function openSplit(pre){
+  pre = pre || {};
+  const expCats = S.settings.cats.filter(c => c.type === "exp");
+  const st = {title: pre.title || "", total: pre.total || "", c: pre.c || (cat("cafe") ? "cafe" : (expCats[0] || {}).id), acc: pre.acc || defAcc(), payer: "me", payerIdx: 0, mode: "eq", people: [{name: "", share: ""}, {name: "", share: ""}]};
+  const calc = () => {
+    const total = parseAmt(st.total) || 0, n = st.people.length + 1;
+    if (st.mode === "eq") { const base = Math.floor(total / n); st.people.forEach(p => p.share = base); return {total, me: total - base * (n - 1)}; }
+    const others = st.people.reduce((s, p) => s + (parseAmt(p.share) || 0), 0);
+    return {total, me: Math.round((total - others) * 100) / 100};
+  };
+  const draw = () => {
+    const r = calc();
+    openSheet("Счет бөлу", `
+      <div class="field"><label for="sp-title">Қайда</label><input class="inp" id="sp-title" placeholder="Мысалы: Del Papa, туған күн" value="${esc(st.title)}"></div>
+      <div class="field"><label for="sp-total">Жалпы сома, ₸</label><input class="inp big num" id="sp-total" inputmode="decimal" placeholder="0" value="${esc(st.total)}"></div>
+      <div class="seg">${[["me","Мен төледім"],["other","Басқа біреу төледі"]].map(([v, l]) => `<button data-spp="${v}" aria-pressed="${st.payer === v}">${l}</button>`).join("")}</div>
+      <div class="seg">${[["eq","Тең бөлу"],["custom","Әркімге өз сомасы"]].map(([v, l]) => `<button data-spm="${v}" aria-pressed="${st.mode === v}">${l}</button>`).join("")}</div>
+      <div class="field"><span class="flabel">Адамдар (${st.people.length + 1})</span>
+        <div class="stack" style="gap:8px">
+          <div class="person me"><span class="me-l">Мен</span><span class="inp num" id="sp-me" style="background:transparent;text-align:right;font-weight:700">${fmt(r.me)}</span><span></span></div>
+          ${st.people.map((p, i) => `<div class="person"><input class="inp" id="sp-n${i}" data-pi="${i}" placeholder="Аты ${i + 1}" value="${esc(p.name)}"><input class="inp num" id="sp-s${i}" data-ps="${i}" inputmode="decimal" style="text-align:right" value="${st.mode === "eq" ? (p.share || "") : esc(p.share)}" ${st.mode === "eq" ? "readonly" : ""} placeholder="0"><button class="x" data-prm="${i}" aria-label="Өшіру" ${st.people.length < 2 ? "disabled" : ""}>×</button></div>`).join("")}
+          <button class="btn ghost sm" id="sp-add" style="align-self:flex-start">${I.plus} Адам қосу</button>
+        </div></div>
+      ${st.payer === "other" ? `<div class="field"><label for="sp-payer">Кім төледі</label><select class="inp" id="sp-payer">${st.people.map((p, i) => `<option value="${i}" ${i === st.payerIdx ? "selected" : ""}>${esc(p.name || "Аты " + (i + 1))}</option>`).join("")}</select><span class="small muted">Сіз оған өз үлесіңізді қайтарасыз — қарыз ретінде жазылады.</span></div>` : ""}
+      <div class="frow"><div class="field"><label for="sp-cat">Санат</label><select class="inp" id="sp-cat">${expCats.map(c => `<option value="${esc(c.id)}" ${c.id === st.c ? "selected" : ""}>${esc(c.icon + " " + c.name)}</option>`).join("")}</select></div>
+      ${st.payer === "me" ? `<div class="field"><label for="sp-acc">Қай шоттан төледіңіз</label><select class="inp" id="sp-acc">${accOptions(st.acc)}</select></div>` : `<div></div>`}</div>
+      <div class="note small" id="sp-sum"></div>
+      <div class="err" id="sp-err"></div>
+      <button class="btn primary block" id="sp-save">Сақтау</button>`, b => {
+      const read = () => {
+        st.title = $("#sp-title", b).value; st.total = $("#sp-total", b).value; st.c = $("#sp-cat", b).value;
+        const a = $("#sp-acc", b); if (a) st.acc = a.value; const py = $("#sp-payer", b); if (py) st.payerIdx = +py.value;
+        st.people.forEach((p, i) => { p.name = $("#sp-n" + i, b).value; if (st.mode === "custom") p.share = $("#sp-s" + i, b).value; });
+      };
+      const refresh = () => {
+        read(); const r = calc();
+        if (st.mode === "eq") st.people.forEach((p, i) => { $("#sp-s" + i, b).value = p.share || ""; });
+        $("#sp-me", b).textContent = fmt(r.me);
+        const others = r.total - r.me;
+        $("#sp-sum", b).innerHTML = st.payer === "me" ? `Сіздің үлесіңіз <b class="num">${fmt(r.me)}</b> шығын болып жазылады. Басқалар сізге <b class="num">${fmt(others)}</b> қайтаруы керек.` : `Сіздің үлесіңіз <b class="num">${fmt(r.me)}</b> — оны төлеген адамға қайтарасыз.`;
+      };
+      refresh();
+      b.addEventListener("input", e => { if (e.target.matches("#sp-total, [data-ps], [data-pi], #sp-title")) refresh(); });
+      $$("[data-spp]", b).forEach(x => x.onclick = () => { read(); st.payer = x.dataset.spp; draw(); });
+      $$("[data-spm]", b).forEach(x => x.onclick = () => { read(); st.mode = x.dataset.spm; if (st.mode === "custom") { const r = calc(); } draw(); });
+      $$("[data-prm]", b).forEach(x => x.onclick = () => { read(); st.people.splice(+x.dataset.prm, 1); if (st.payerIdx >= st.people.length) st.payerIdx = 0; draw(); });
+      $("#sp-add", b).onclick = () => { read(); st.people.push({name: "", share: ""}); draw(); setTimeout(() => { const i = $("#sp-n" + (st.people.length - 1)); if (i) i.focus(); }, 50); };
+      $("#sp-save", b).onclick = () => {
+        read(); const r = calc(), err = $("#sp-err", b);
+        if (!(r.total > 0)) { err.textContent = "Жалпы соманы жазыңыз."; return; }
+        if (r.me < 0) { err.textContent = "Адамдардың сомасы жалпы сомадан асып кетті."; return; }
+        if (st.mode === "custom" && st.people.some(p => !(parseAmt(p.share) > 0))) { err.textContent = "Әр адамның сомасын жазыңыз."; return; }
+        if (st.payer === "me" && !st.acc) { err.textContent = "Шотты таңдаңыз."; return; }
+        const id = uid(), date = today(), title = st.title.trim() || (cat(st.c) || {}).name || "Счет";
+        const people = st.people.map((p, i) => ({name: p.name.trim() || "Аты " + (i + 1), share: st.mode === "eq" ? p.share : parseAmt(p.share)}));
+        const sp = {id, title, date, total: r.total, c: st.c, me: r.me, mode: st.mode, payer: st.payer, acc: st.payer === "me" ? st.acc : "", people};
+        const k = mkey(date); S.months[k] = S.months[k] || [];
+        const push = t => { t.ts = Date.now(); S.months[k].push(t); };
+        if (st.payer === "me") {
+          if (r.me > 0) push({id: uid(), t: "exp", a: r.me, c: st.c, acc: st.acc, date, n: title, split: id});
+          for (const p of people) {
+            const d = {id: uid(), person: p.name, amount: p.share, dir: "lent", date, due: "", note: title, closed: false, split: id};
+            S.settings.debts.push(d); p.d = d.id;
+            push({id: uid(), t: "debt", d: d.id, s: -1, a: p.share, acc: st.acc, date, n: title, split: id});
+          }
+        } else {
+          const payer = people[st.payerIdx] || people[0]; sp.payerName = payer.name;
+          if (r.me > 0) {
+            push({id: uid(), t: "exp", a: r.me, c: st.c, acc: "", date, n: `${title} (${payer.name} төледі)`, split: id});
+            const d = {id: uid(), person: payer.name, amount: r.me, dir: "borrowed", date, due: "", note: title, closed: false, split: id};
+            S.settings.debts.push(d); payer.d = d.id;
+            push({id: uid(), t: "debt", d: d.id, s: 1, a: r.me, acc: "", date, n: title, split: id});
+          }
+        }
+        S.settings.splits.push(sp);
+        ui.lastAcc = st.acc || ui.lastAcc;
+        persistSettings(); persistMonth(k); bump(); render();
+        openSplitView(id); toast("Счет бөлінді");
+      };
+    });
+  };
+  draw();
+}
+function shareText(sp, p){
+  const phone = (S.settings.kaspiPhone || "").trim();
+  return `${sp.title}, ${dayLabel(sp.date).toLowerCase()}: жалпы ${fmt(sp.total)}, сенің үлесің ${fmt(p.share)}.${phone ? ` Kaspi: ${phone}` : ""}`;
+}
+async function shareOrCopy(text){
+  try { if (navigator.share) { await navigator.share({text}); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(text); toast("Хабар көшірілді — WhatsApp не Telegram-ға қойыңыз"); } catch { toast(text); }
+}
+function openSplitView(id){
+  const sp = splitById(id); if (!sp) { closeSheet(); return; }
+  const i = splitInfo(sp);
+  const box = on => `<span class="box">${on ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>` : ""}</span>`;
+  const rows = sp.payer === "me"
+    ? sp.people.map((p, idx) => { const d = p.d && debt(p.d); if (!d) return ""; return `<div style="display:flex;align-items:center;gap:6px"><button class="chk" role="checkbox" aria-checked="${d.closed}" data-spchk="${esc(d.id)}">${box(d.closed)}<span class="nm">${esc(p.name)}</span><span class="num" style="font-weight:700">${fmt(p.share)}</span></button>${d.closed ? "" : `<button class="x" data-spshare="${idx}" aria-label="${esc(p.name)} үшін хабар жіберу" title="Хабар жіберу">📤</button>`}</div>`; }).join("")
+    : sp.people.filter(p => p.d && debt(p.d)).map(p => { const d = debt(p.d); return `<button class="chk" role="checkbox" aria-checked="${d.closed}" data-spchk="${esc(d.id)}">${box(d.closed)}<span class="nm">${esc(p.name)}-ге қайтардым</span><span class="num" style="font-weight:700">${fmt(d.amount)}</span></button>`; }).join("");
+  openSheet(sp.title, `
+    <div class="kpis" style="grid-template-columns:repeat(2,1fr)"><div class="kpi"><small>Жалпы</small><b class="num">${fmt(sp.total)}</b><em>${esc(dayLabel(sp.date))}</em></div><div class="kpi"><small>Сіздің үлесіңіз</small><b class="num">${fmt(sp.me)}</b><em>${sp.payer === "me" ? `${i.paid}/${i.count} қайтарды` : esc(sp.payerName) + " төледі"}</em></div></div>
+    ${sp.payer === "me" ? `<div class="bar thick"><i class="ok" style="width:${i.owed ? i.back / i.owed * 100 : 100}%"></i></div><div class="small muted num">Қайтарылды ${fmt(i.back)} / ${fmt(i.owed)}</div>` : ""}
+    <div class="card" style="padding:4px 10px;box-shadow:none;border:1px solid var(--line)">${rows || `<div class="empty small">Қайтаратын ешкім жоқ.</div>`}</div>
+    <span class="small muted">${sp.payer === "me" ? "Адам ақшаны жібергенде ✓ басыңыз — сома шотыңызға түседі. 📤 — оған үлесін хабарлама етіп жіберу." : "Қайтарғанда ✓ басыңыз — сома шотыңыздан шегеріледі."}</span>
+    ${sp.payer === "me" ? `<div class="field"><label for="sp-phone">Kaspi нөміріңіз (хабарламаға қосылады)</label><input class="inp" id="sp-phone" type="tel" inputmode="tel" placeholder="+7 7__ ___ __ __" value="${esc(S.settings.kaspiPhone || "")}"></div>` : ""}
+    <button class="btn danger block" id="sp-del">Счетты өшіру</button>`, b => {
+    $$("[data-spchk]", b).forEach(x => x.onclick = () => toggleSplitDebt(sp, x.dataset.spchk));
+    $$("[data-spshare]", b).forEach(x => x.onclick = () => shareOrCopy(shareText(sp, sp.people[+x.dataset.spshare])));
+    const ph = $("#sp-phone", b); if (ph) ph.addEventListener("change", () => { S.settings.kaspiPhone = ph.value.trim(); persistSettings(); });
+    $("#sp-del", b).onclick = e => armDelete(e.currentTarget, () => {
+      const ids = new Set(sp.people.map(p => p.d).filter(Boolean));
+      removeTxWhere(t => t.split === sp.id || (t.t === "debt" && ids.has(t.d)));
+      S.settings.debts = S.settings.debts.filter(d => !ids.has(d.id));
+      S.settings.splits = S.settings.splits.filter(x => x.id !== sp.id);
+      commitSettings(); closeSheet(); toast("Счет өшірілді");
+    });
+  });
+}
+function toggleSplitDebt(sp, dId){
+  const d = debt(dId); if (!d) return;
+  if (!d.closed) {
+    const left = d.amount - debtRepaid(d);
+    if (left > 0) upsertTx({id: uid(), t: "debt", d: d.id, rep: true, s: d.dir === "lent" ? 1 : -1, a: left, acc: sp.acc || defAcc(), date: today(), n: sp.title});
+    d.closed = true;
+  } else {
+    removeTxWhere(t => t.t === "debt" && t.d === d.id && t.rep);
+    d.closed = false;
+  }
+  persistSettings(); bump(); render(); openSplitView(sp.id);
+  const i = splitInfo(sp); if (i.done && sp.payer === "me") toast("Барлығы қайтарды! 🎉");
+}
+
+/* ---------- drag & drop (Budget OK style) ---------- */
+let drag = null, suppressClick = false;
+function dropTargets(kind){ return kind === "inc" ? ".bub.acc[data-kind]" : kind === "acc" ? ".bub.acc[data-kind], .bub.exp" : null; }
+document.addEventListener("pointerdown", e => {
+  const b = e.target.closest && e.target.closest(".bub[data-drag]");
+  if (!b || (e.button && e.button !== 0)) return;
+  if (e.pointerType === "mouse") e.preventDefault();
+  drag = {el: b, kind: b.dataset.kind, id: b.dataset.id, x: e.clientX, y: e.clientY, pid: e.pointerId, started: false, target: null};
+});
+document.addEventListener("dragstart", e => { if (e.target.closest && e.target.closest(".bub")) e.preventDefault(); });
+document.addEventListener("pointermove", e => {
+  if (!drag || e.pointerId !== drag.pid) return;
+  if (!drag.started) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
+    drag.started = true;
+    const g = document.createElement("div"); g.className = "ghost"; g.textContent = drag.el.querySelector(".bub-c").textContent; document.body.appendChild(g); drag.ghost = g;
+    drag.el.classList.add("dragging"); document.body.classList.add("dragging");
+    $$(dropTargets(drag.kind)).forEach(t => { if (t !== drag.el) t.classList.add("target"); });
+  }
+  e.preventDefault();
+  drag.ghost.style.left = e.clientX + "px"; drag.ghost.style.top = e.clientY + "px";
+  const over = document.elementFromPoint(e.clientX, e.clientY);
+  const t = over && over.closest(".bub.target");
+  if (t !== drag.target) { if (drag.target) drag.target.classList.remove("drop-ok"); drag.target = t; if (t) t.classList.add("drop-ok"); }
+  // auto-scroll near the edges on phones
+  const edge = 70; if (e.clientY > innerHeight - edge) window.scrollBy(0, 12); else if (e.clientY < edge) window.scrollBy(0, -12);
+}, {passive: false});
+function endDrag(apply){
+  const d = drag; drag = null; if (!d || !d.started) return;
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
+  d.ghost.remove(); d.el.classList.remove("dragging"); document.body.classList.remove("dragging");
+  $$(".bub.target").forEach(t => t.classList.remove("target", "drop-ok"));
+  if (!apply || !d.target) return;
+  const to = d.target.dataset.id, tk = d.target.dataset.kind;
+  if (d.kind === "inc" && tk === "acc") openTx(null, "inc", {c: d.id, acc: to});
+  else if (d.kind === "acc" && tk === "acc") openTx(null, "tr", {acc: d.id, to});
+  else if (d.kind === "acc" && tk === "exp") openTx(null, "exp", {acc: d.id, c: to});
+}
+document.addEventListener("pointerup", e => { if (drag && e.pointerId === drag.pid) endDrag(true); });
+document.addEventListener("pointercancel", () => endDrag(false));
+document.addEventListener("click", e => { if (suppressClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+document.addEventListener("contextmenu", e => { if (e.target.closest && e.target.closest(".bub")) e.preventDefault(); });
 
 /* account editor */
 function openAcc(id){
@@ -1327,6 +1571,10 @@ function demoState(){
     if (last >= 18 && back % 2 === 0) add({t: "inc", a: 45000, c: "side", acc: "card", date: D(18), n: "Фриланс"});
   }
   add({t: "debt", d: "d1", s: -1, a: 15000, acc: "cash", date: st.debts[0].date, n: ""});
+  { const sd = dstr(new Date(Date.now() - 2 * 864e5)), people = [["Айгерім", 9000, true], ["Нұрлан", 9000, false], ["Дана", 9000, false]];
+    st.splits.push({id: "s1", title: "Del Papa", date: sd, total: 36000, c: "cafe", me: 9000, mode: "eq", payer: "me", acc: "card", people: people.map(([name, share], i) => ({name, share, d: "sd" + i}))});
+    add({t: "exp", a: 9000, c: "cafe", acc: "card", date: sd, n: "Del Papa", split: "s1"});
+    people.forEach(([name, share, paid], i) => { st.debts.push({id: "sd" + i, person: name, amount: share, dir: "lent", date: sd, due: "", note: "Del Papa", closed: paid, split: "s1"}); add({t: "debt", d: "sd" + i, s: -1, a: share, acc: "card", date: sd, n: "Del Papa", split: "s1"}); if (paid) add({t: "debt", d: "sd" + i, rep: true, s: 1, a: share, acc: "card", date: today(), n: "Del Papa"}); }); }
   st.recurring[0].last = cm; if (td >= 10) st.recurring[1].last = cm;
   return {settings: st, months};
 }
@@ -1376,7 +1624,9 @@ function exitDemo(){ if (mode !== "demo" || !saved) return; S.settings = saved.s
 /* ---------- events ---------- */
 const ACT = {
   tab: el => { ui.tab = el.dataset.tab; ui.sub = null; closeSheet(); render(); window.scrollTo(0, 0); },
-  newTx: el => openTx(null, el.dataset.type),
+  newTx: el => openTx(null, el.dataset.type, el.dataset.c ? {c: el.dataset.c} : null),
+  newSplit: () => openSplit(),
+  viewSplit: el => openSplitView(el.dataset.id),
   editTx: el => { const t = (S.months[el.dataset.m] || []).find(x => x.id === el.dataset.id); if (t) openTx(t); },
   closeSheet: () => closeSheet(),
   opsMonth: el => { ui.opsMonth = shiftMonth(ui.opsMonth, +el.dataset.d); render(); },
