@@ -1,0 +1,1326 @@
+<!doctype html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Қалта</title>
+<meta name="description" content="Тегін жеке бюджет: шығын, кіріс, жинақ мақсаттары және айлық талдау.">
+<meta name="theme-color" content="#e0313a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Қалта">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700&display=swap">
+<style>
+:root{
+  --bg:#f6f2f2; --surface:#ffffff; --surface-2:#f1eaea; --line:#e7dddd;
+  --text:#1e1718; --muted:#76696b; --faint:#a4979a;
+  --accent:#e0313a; --accent-2:#b81f29; --accent-soft:#fde6e7; --on-accent:#ffffff;
+  --pos:#0c7f45; --neg:#c62f35; --warn:#b86e00; --warn-soft:#fff1d6;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s-other:#a7a09e;
+  --inc:#1baf7a; --exp:#eb6834;
+  --grid:#ece5e5; --axis:#cfc4c5;
+  --shadow:0 1px 2px rgba(60,20,24,.06),0 6px 24px rgba(60,20,24,.06);
+  --r:18px;
+  --f-body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-disp:"Unbounded","Onest",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#131011; --surface:#1d1819; --surface-2:#282223; --line:#342c2d;
+    --text:#f4eeee; --muted:#a8999c; --faint:#716567;
+    --accent:#ff4d55; --accent-2:#e0313a; --accent-soft:#3a1c1f; --on-accent:#ffffff;
+    --pos:#3fcf8e; --neg:#ff6b70; --warn:#f2b441; --warn-soft:#3a2d12;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#1f9a1f; --s7:#9085e9; --s-other:#6f6869;
+    --inc:#199e70; --exp:#d95926;
+    --grid:#2a2324; --axis:#403738;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 24px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#131011; --surface:#1d1819; --surface-2:#282223; --line:#342c2d;
+  --text:#f4eeee; --muted:#a8999c; --faint:#716567;
+  --accent:#ff4d55; --accent-2:#e0313a; --accent-soft:#3a1c1f; --on-accent:#ffffff;
+  --pos:#3fcf8e; --neg:#ff6b70; --warn:#f2b441; --warn-soft:#3a2d12;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#1f9a1f; --s7:#9085e9; --s-other:#6f6869;
+  --inc:#199e70; --exp:#d95926;
+  --grid:#2a2324; --axis:#403738;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px)}
+html,body{background:var(--bg)}
+body{color:var(--text);font:15px/1.45 var(--f-body);-webkit-font-smoothing:antialiased;min-height:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.num{font-variant-numeric:tabular-nums}
+h1,h2,h3{margin:0;text-wrap:balance}
+.disp{font-family:var(--f-disp);letter-spacing:-.01em}
+
+/* Layout */
+.app{display:grid;grid-template-columns:1fr;min-height:100vh}
+.side{display:none}
+.main{padding-inline:16px;padding-block:14px 120px;max-width:1080px;width:100%;margin-inline:auto;min-width:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#f0545b,#c81e28);display:grid;place-items:center;color:#fff;font:700 16px var(--f-disp);box-shadow:0 4px 12px rgba(200,30,40,.3)}
+.brand b{font:700 17px var(--f-disp);letter-spacing:-.01em}
+.page-title{font:700 20px var(--f-disp);letter-spacing:-.01em}
+.sync{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--faint);display:inline-block}
+.sync.ok i{background:var(--pos)} .sync.err i{background:var(--neg)} .sync.busy i{background:var(--warn)}
+
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.tab{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;color:var(--muted);font-size:11px;font-weight:500;border-radius:12px}
+.tab svg{width:22px;height:22px}
+.tab[aria-current="page"]{color:var(--accent)}
+.fab{position:fixed;right:18px;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:21;width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent);box-shadow:0 8px 24px rgba(224,49,58,.4);display:grid;place-items:center}
+.fab svg{width:28px;height:28px}
+
+@media (min-width:900px){
+  .app{grid-template-columns:232px 1fr}
+  .side{display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;padding:22px 14px;border-right:1px solid var(--line);background:var(--surface)}
+  .side .brand{padding:0 8px 18px}
+  .side .tab{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14.5px;padding:10px 12px;color:var(--text)}
+  .side .tab[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+  .side .add-btn{margin-top:14px}
+  .tabbar,.fab{display:none}
+  .main{padding-block:26px 60px;padding-inline:32px}
+  .topbar .logo{display:none}
+}
+
+/* Surfaces */
+.card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
+.section{display:flex;flex-direction:column;gap:10px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.grid2{display:grid;gap:16px;grid-template-columns:1fr}
+@media (min-width:900px){.grid2{grid-template-columns:1fr 1fr}.span2{grid-column:1/-1}}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.sec-h h2{font-size:16px;font-weight:700}
+.sec-h .link{background:none;border:0;color:var(--accent);font-weight:600;font-size:14px;padding:4px}
+.muted{color:var(--muted)} .small{font-size:13px}
+.pos{color:var(--pos)} .neg{color:var(--neg)}
+
+/* Hero */
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:20px 20px 18px;color:#fff;background:radial-gradient(120% 140% at 100% 0%,#ff6b70 0%,#e0313a 42%,#a9161f 100%);box-shadow:0 12px 32px rgba(190,30,40,.28)}
+.hero::after{content:"";position:absolute;right:-40px;top:-50px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.45),rgba(255,255,255,.08) 60%,transparent 70%);pointer-events:none}
+.hero .lbl{font-size:13px;opacity:.85;font-weight:500}
+.hero .big{font:700 clamp(30px,8vw,40px)/1.1 var(--f-disp);margin:4px 0 14px;letter-spacing:-.02em}
+.hero-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative;z-index:1}
+.hero-row div{background:rgba(255,255,255,.14);border-radius:12px;padding:8px 10px;min-width:0}
+.hero-row small{display:block;font-size:11.5px;opacity:.85}
+.hero-row b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.hero-day{margin-top:12px;font-size:13.5px;position:relative;z-index:1;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hero-day b{font-size:15px}
+
+/* Accounts strip */
+.hscroll{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;margin-inline:-16px;padding-inline:16px}
+.hscroll::-webkit-scrollbar{display:none}
+.acc{flex:0 0 auto;min-width:148px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;text-align:left}
+.acc .ic{font-size:20px}
+.acc small{display:block;color:var(--muted);font-size:12.5px;margin-top:4px}
+.acc b{font-size:16px}
+.acc.add{display:grid;place-items:center;color:var(--accent);font-weight:600;min-width:110px;border-style:dashed}
+
+/* Lists */
+.list{display:flex;flex-direction:column}
+.row{display:flex;align-items:center;gap:12px;padding:10px 4px;border:0;background:none;width:100%;text-align:left;border-radius:12px}
+button.row:hover{background:var(--surface-2)}
+.row + .row{border-top:1px solid var(--line)}
+.ico{flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center;font-size:19px}
+.row .mid{flex:1;min-width:0}
+.row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .amt{font-weight:700;white-space:nowrap;text-align:right}
+.day-h{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);font-weight:600;padding:14px 4px 4px;text-transform:uppercase;letter-spacing:.04em}
+
+/* Controls */
+.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:600;background:var(--surface-2);color:var(--text);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--neg);border:1px solid color-mix(in srgb,var(--neg) 35%,transparent)}
+.btn.danger.armed{background:var(--neg);color:#fff}
+.btn.sm{padding:7px 12px;font-size:13.5px;border-radius:10px}
+.btn.block{width:100%}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.seg{display:flex;background:var(--surface-2);border-radius:12px;padding:3px;gap:2px}
+.seg button{flex:1;border:0;background:none;padding:8px 10px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label,.flabel{font-size:12.5px;color:var(--muted);font-weight:600}
+.inp{width:100%;background:var(--surface-2);border:1px solid transparent;border-radius:12px;padding:11px 12px;min-width:0}
+.inp:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.inp.big{font:700 30px var(--f-disp);padding:12px 14px;letter-spacing:-.01em}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.err{color:var(--neg);font-size:13px;min-height:1em}
+.monthnav{display:flex;align-items:center;gap:6px}
+.monthnav button{border:0;background:var(--surface);width:34px;height:34px;border-radius:10px;display:grid;place-items:center;box-shadow:var(--shadow)}
+.monthnav span{min-width:128px;text-align:center;font-weight:700}
+.monthnav button:disabled{opacity:.35;cursor:default}
+
+/* Progress */
+.bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar > i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.bar.thick{height:12px}
+.bar > i.ok{background:var(--pos)} .bar > i.warn{background:var(--warn)} .bar > i.over{background:var(--neg)}
+
+/* Category grid */
+.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px}
+.cat{border:1px solid transparent;background:var(--surface-2);border-radius:14px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;line-height:1.2;text-align:center;min-width:0}
+.cat span:first-child{font-size:21px}
+.cat span:last-child{overflow:hidden;text-overflow:ellipsis;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cat[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+
+/* Alerts */
+.note{border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;background:var(--surface-2);font-size:14px}
+.note.warn{background:var(--warn-soft)}
+.note.accent{background:var(--accent-soft)}
+.note .mid{flex:1;min-width:0}
+.banner{border-radius:12px;padding:9px 12px;font-size:13px;margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--surface-2);color:var(--muted)}
+.banner.demo{background:var(--warn-soft);color:var(--text)}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media (min-width:640px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpi{background:var(--surface);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);min-width:0}
+.kpi small{color:var(--muted);font-size:12.5px;font-weight:600;display:block}
+.kpi b{font-size:18px;display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi em{font-style:normal;font-size:12px;color:var(--muted)}
+
+/* Charts */
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart text{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.chart.wide text{font-size:14px}
+@media (min-width:900px){.chart.wide text{font-size:12px}}
+.donut-wrap{display:grid;grid-template-columns:1fr;gap:14px;align-items:center}
+@media (min-width:520px){.donut-wrap{grid-template-columns:200px 1fr}}
+.donut{max-width:220px;margin-inline:auto;width:100%}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.catrow{display:grid;grid-template-columns:12px 1fr auto;gap:10px;align-items:center;padding:7px 0;font-size:14px}
+.catrow + .catrow{border-top:1px solid var(--line)}
+.catrow .sw{width:12px;height:12px;border-radius:4px}
+.catrow .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.catrow .v{text-align:right;white-space:nowrap}
+.catrow .v small{display:block;font-size:11.5px;color:var(--muted)}
+.tip{position:fixed;z-index:60;pointer-events:none;background:var(--text);color:var(--bg);font-size:12.5px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,calc(-100% - 10px));box-shadow:var(--shadow)}
+.split{display:flex;height:22px;border-radius:8px;overflow:hidden;gap:2px;background:var(--surface)}
+.split > div{height:100%}
+.rule-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.rule-grid div{background:var(--surface-2);border-radius:12px;padding:8px 10px;min-width:0}
+.rule-grid small{display:block;font-size:11.5px;color:var(--muted)}
+.rule-grid b{font-size:15px}
+.insight{display:flex;gap:10px;align-items:flex-start;padding:8px 0;font-size:14px}
+.insight + .insight{border-top:1px solid var(--line)}
+.insight .dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:7px;background:var(--accent)}
+
+/* Goals */
+.goal{display:flex;flex-direction:column;gap:10px}
+.goal-top{display:flex;gap:12px;align-items:center}
+.goal-top .ico{flex-basis:48px;width:48px;height:48px;font-size:24px;border-radius:14px}
+.goal-top h3{font-size:16px}
+.goal-nums{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.goal-nums b{font:700 20px var(--f-disp);letter-spacing:-.01em}
+.goal-meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.goal-meta b{color:var(--text);font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:99px;padding:3px 9px;background:var(--surface-2);color:var(--muted)}
+.pill.ok{background:color-mix(in srgb,var(--pos) 16%,transparent);color:var(--pos)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:color-mix(in srgb,var(--neg) 14%,transparent);color:var(--neg)}
+
+/* Sheet */
+.sheet-wrap{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.scrim{position:absolute;inset:0;background:rgba(15,8,9,.45)}
+.sheet{position:relative;background:var(--surface);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:22px 22px 0 0;padding:8px 16px calc(18px + env(safe-area-inset-bottom,0px));animation:up .22s ease-out}
+@media (min-width:700px){.sheet-wrap{align-items:center}.sheet{border-radius:22px;padding-bottom:20px}}
+@keyframes up{from{transform:translateY(24px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;position:sticky;top:-8px;background:var(--surface);z-index:1}
+.sheet-h h2{font-size:17px;font-weight:700}
+.x{border:0;background:var(--surface-2);width:34px;height:34px;border-radius:50%;display:grid;place-items:center}
+.sheet-body{display:flex;flex-direction:column;gap:14px}
+
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+.empty b{display:block;color:var(--text);font-size:16px;margin-bottom:4px}
+.menu .row{padding:12px 4px}
+.chev{color:var(--faint)}
+.tips li{margin-bottom:8px}
+.tips{padding-left:18px;margin:0}
+.loading{display:grid;place-items:center;min-height:60vh;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <aside class="side" id="side"></aside>
+  <main class="main" id="main"><div class="loading">Жүктелуде…</div></main>
+</div>
+<nav class="tabbar" id="tabbar" aria-label="Негізгі мәзір"></nav>
+<button class="fab" id="fab" data-act="newTx" aria-label="Операция қосу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+<div class="sheet-wrap" id="sheet" hidden>
+  <div class="scrim" data-act="closeSheet"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-h"><h2 id="sheet-title"></h2><button class="x" data-act="closeSheet" aria-label="Жабу"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script>
+(function(){
+"use strict";
+/* ---------- helpers ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, "0");
+const nf = new Intl.NumberFormat("ru-RU", {maximumFractionDigits: 0});
+const fmt = n => nf.format(Math.round(n || 0)) + " ₸";
+const fmtS = n => (n > 0 ? "+" : n < 0 ? "−" : "") + nf.format(Math.abs(Math.round(n || 0))) + " ₸";
+const fmtK = n => { const a = Math.abs(n); if (a >= 1e6) return (n/1e6).toFixed(a >= 1e7 ? 0 : 1).replace(".", ",") + " млн"; if (a >= 1000) return Math.round(n/1000) + " мың"; return String(Math.round(n)); };
+const parseAmt = v => { const x = parseFloat(String(v ?? "").replace(/[\s ]/g, "").replace(",", ".")); return isFinite(x) ? Math.round(x * 100) / 100 : NaN; };
+const dstr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => dstr(new Date());
+const mkey = date => date.slice(0, 7);
+const curMonth = () => mkey(today());
+const MONTHS = ["Қаңтар","Ақпан","Наурыз","Сәуір","Мамыр","Маусым","Шілде","Тамыз","Қыркүйек","Қазан","Қараша","Желтоқсан"];
+const MSHORT = ["Қаң","Ақп","Нау","Сәу","Мам","Мау","Шіл","Там","Қыр","Қаз","Қар","Жел"];
+const WD = ["Жексенбі","Дүйсенбі","Сейсенбі","Сәрсенбі","Бейсенбі","Жұма","Сенбі"];
+const monthLabel = k => { const [y, m] = k.split("-").map(Number); return MONTHS[m-1] + " " + y; };
+const shiftMonth = (k, d) => { let [y, m] = k.split("-").map(Number); m += d; while (m < 1) { m += 12; y--; } while (m > 12) { m -= 12; y++; } return `${y}-${pad(m)}`; };
+const daysIn = k => { const [y, m] = k.split("-").map(Number); return new Date(y, m, 0).getDate(); };
+const dayLabel = ds => { const d = new Date(ds + "T00:00:00"); const t = today(); const y = dstr(new Date(Date.now() - 864e5)); if (ds === t) return "Бүгін"; if (ds === y) return "Кеше"; return `${d.getDate()} ${MONTHS[d.getMonth()].toLowerCase()}, ${WD[d.getDay()].toLowerCase()}`; };
+const monthsBetween = (fromDs, toDs) => { const a = new Date(fromDs + "T00:00:00"), b = new Date(toDs + "T00:00:00"); return (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth()) + (b.getDate() >= a.getDate() ? 0 : -1); };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const lsGet = k => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+/* ---------- defaults ---------- */
+function defaults(){
+  const ce = (id, name, icon, group) => ({id, name, icon, type: "exp", group});
+  const ci = (id, name, icon) => ({id, name, icon, type: "inc"});
+  return {
+    v: 1,
+    accounts: [
+      {id: "card", name: "Карта", icon: "💳", initial: 0},
+      {id: "cash", name: "Қолма-қол", icon: "💵", initial: 0}
+    ],
+    cats: [
+      ce("food","Азық-түлік","🛒","need"), ce("cafe","Кафе, фастфуд","🍔","want"),
+      ce("transport","Көлік","🚌","need"), ce("taxi","Такси","🚕","want"),
+      ce("home","Пәтер, коммуналдық","🏠","need"), ce("phone","Байланыс, интернет","📱","need"),
+      ce("health","Денсаулық","💊","need"), ce("edu","Білім","📚","need"),
+      ce("clothes","Киім","👕","want"), ce("fun","Ойын-сауық","🎮","want"),
+      ce("beauty","Сұлулық","💅","want"), ce("subs","Жазылымдар","📺","want"),
+      ce("gifts","Сыйлықтар","🎁","want"), ce("other","Басқа","📦","want"),
+      ci("salary","Жалақы","💼"), ci("stipend","Стипендия","🎓"), ci("side","Қосымша табыс","💡"),
+      ci("gift_in","Сыйлық","🎁"), ci("cashback","Кэшбэк","💳"), ci("other_in","Басқа","💰")
+    ],
+    budgets: {},
+    goals: [],
+    recurring: [],
+    debts: []
+  };
+}
+function normalize(s){
+  const d = defaults();
+  s = s && typeof s === "object" ? s : {};
+  for (const k of ["accounts","cats","goals","recurring","debts"]) if (!Array.isArray(s[k])) s[k] = d[k];
+  if (!s.budgets || typeof s.budgets !== "object") s.budgets = {};
+  if (!s.cats.length) s.cats = d.cats;
+  if (!s.accounts.length) s.accounts = d.accounts;
+  s.v = 1;
+  return s;
+}
+
+/* ---------- state ---------- */
+let S = {settings: null, months: {}};
+let saved = null;          // real state stashed while demo runs
+let mode = "loading";      // cloud | local | demo
+let cloud = null;          // {db, base}
+let syncState = "idle";
+let ver = 0, flatCache = null, flatVer = -1;
+const ui = {tab: "home", sub: null, opsMonth: curMonth(), anMonth: curMonth(), opsType: "all", opsCat: "", opsQ: "", lastAcc: lsGet("qalta-lastacc") || ""};
+
+function bump(){ ver++; }
+function allTx(){ if (flatVer !== ver) { flatCache = Object.values(S.months).flat(); flatVer = ver; } return flatCache; }
+const cat = id => S.settings.cats.find(c => c.id === id);
+const acc = id => S.settings.accounts.find(a => a.id === id);
+const goal = id => S.settings.goals.find(g => g.id === id);
+const debt = id => S.settings.debts.find(d => d.id === id);
+
+function balances(){
+  const b = {};
+  for (const a of S.settings.accounts) b[a.id] = +a.initial || 0;
+  const add = (id, v) => { if (id && id in b) b[id] += v; };
+  for (const t of allTx()) {
+    if (t.t === "exp") add(t.acc, -t.a);
+    else if (t.t === "inc") add(t.acc, t.a);
+    else if (t.t === "tr") { add(t.acc, -t.a); add(t.to, t.a); }
+    else if (t.t === "goal") add(t.acc, -(t.gd || 1) * t.a);
+    else if (t.t === "debt") add(t.acc, (t.s || 1) * t.a);
+  }
+  return b;
+}
+const totalBalance = () => Object.values(balances()).reduce((a, b) => a + b, 0);
+function goalSaved(g){ let s = +g.start || 0; for (const t of allTx()) if (t.t === "goal" && t.g === g.id) s += (t.gd || 1) * t.a; return s; }
+function debtRepaid(d){ let s = 0; for (const t of allTx()) if (t.t === "debt" && t.d === d.id && t.rep) s += t.a; return s; }
+
+function monthStats(k){
+  const txs = S.months[k] || [];
+  let inc = 0, exp = 0, sav = 0, need = 0, want = 0;
+  const byCat = {}, byDay = {};
+  for (const t of txs) {
+    if (t.t === "exp") {
+      exp += t.a; byCat[t.c] = (byCat[t.c] || 0) + t.a;
+      const d = +t.date.slice(8, 10); byDay[d] = (byDay[d] || 0) + t.a;
+      const c = cat(t.c); if (c && c.group === "need") need += t.a; else want += t.a;
+    } else if (t.t === "inc") inc += t.a;
+    else if (t.t === "goal") sav += (t.gd || 1) * t.a;
+  }
+  return {inc, exp, sav, need, want, byCat, byDay, txs};
+}
+
+/* ---------- persistence ---------- */
+const LS_KEY = "qalta-data-v1";
+const META_KEY = "qalta-meta-v1";          // {uid, dirty:{path: version}}
+const CFG = window.QALTA_CONFIG || {};
+const hasCloud = () => !!(CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase);
+let sb = null, session = null, rtChannel = null;
+let meta = {uid: null, dirty: {}};
+function loadMeta(){ try { meta = Object.assign({uid: null, dirty: {}}, JSON.parse(lsGet(META_KEY) || "{}")); } catch {} }
+function saveMeta(){ lsSet(META_KEY, JSON.stringify(meta)); }
+function setSync(s){ syncState = s; const el = $("#sync"); if (el) el.outerHTML = syncHTML(); }
+function saveLocal(){ if (mode === "demo" || mode === "auth") return; lsSet(LS_KEY, JSON.stringify({settings: S.settings, months: S.months})); }
+function markDirty(path){
+  if (mode === "demo") return;
+  saveLocal();
+  if (mode !== "cloud") return;
+  meta.dirty[path] = (meta.dirty[path] || 0) + 1; saveMeta(); scheduleFlush();
+}
+function persistSettings(){ markDirty("settings"); }
+function persistMonth(k){ markDirty("m/" + k); }
+const docData = p => p === "settings" ? S.settings : {items: S.months[p.slice(2)] || []};
+let flushT = null, flushing = false;
+function scheduleFlush(ms){ clearTimeout(flushT); flushT = setTimeout(flush, ms ?? 400); }
+async function flush(){
+  if (mode !== "cloud" || !sb || !session || flushing) return;
+  const paths = Object.keys(meta.dirty);
+  if (!paths.length) { setSync("ok"); return; }
+  if (!navigator.onLine) { setSync("offline"); return; }
+  flushing = true; setSync("busy");
+  const vers = {}; for (const p of paths) vers[p] = meta.dirty[p];
+  const now = new Date().toISOString();
+  const rows = paths.map(p => ({user_id: session.user.id, path: p, data: JSON.parse(JSON.stringify(docData(p))), updated_at: now}));
+  let error = null;
+  try { ({error} = await sb.from("qalta_docs").upsert(rows)); } catch (e) { error = e; }
+  flushing = false;
+  if (error) { setSync(navigator.onLine ? "err" : "offline"); scheduleFlush(6000); return; }
+  for (const p of paths) if (meta.dirty[p] === vers[p]) delete meta.dirty[p];
+  saveMeta();
+  if (Object.keys(meta.dirty).length) scheduleFlush(50); else setSync("ok");
+}
+function applyRemote(rows){
+  let changed = false;
+  for (const r of rows || []) {
+    if (!r || !r.path || meta.dirty[r.path]) continue;
+    if (r.path === "settings") { S.settings = normalize(r.data); changed = true; }
+    else if (r.path.startsWith("m/")) { S.months[r.path.slice(2)] = r.data && Array.isArray(r.data.items) ? r.data.items : []; changed = true; }
+  }
+  if (changed) { bump(); saveLocal(); }
+  return changed;
+}
+async function pull(){
+  if (mode !== "cloud" || !sb || !navigator.onLine) return;
+  try {
+    const {data, error} = await sb.from("qalta_docs").select("path,data");
+    if (error) throw error;
+    if (applyRemote(data)) render();
+    flush();
+  } catch { setSync("err"); }
+}
+function commitSettings(){ bump(); persistSettings(); render(); }
+
+function upsertTx(t, prevKey){
+  const k = mkey(t.date);
+  if (prevKey && prevKey !== k) { S.months[prevKey] = (S.months[prevKey] || []).filter(x => x.id !== t.id); persistMonth(prevKey); }
+  t.ts = t.ts || Date.now();
+  S.months[k] = (S.months[k] || []).filter(x => x.id !== t.id).concat([t]);
+  persistMonth(k); bump(); render();
+}
+function removeTx(t){
+  const k = mkey(t.date);
+  S.months[k] = (S.months[k] || []).filter(x => x.id !== t.id);
+  persistMonth(k); bump(); render();
+}
+function removeTxWhere(fn){
+  for (const k of Object.keys(S.months)) {
+    const before = S.months[k].length;
+    S.months[k] = S.months[k].filter(t => !fn(t));
+    if (S.months[k].length !== before) persistMonth(k);
+  }
+  bump();
+}
+
+/* ---------- boot ---------- */
+function loadLocalData(){
+  let data = null; try { data = JSON.parse(lsGet(LS_KEY) || "null"); } catch {}
+  S.settings = normalize(data && data.settings);
+  S.months = (data && data.months) || {};
+  bump();
+}
+async function boot(){
+  applyTheme(); loadMeta(); loadLocalData();
+  if (!hasCloud()) { mode = "local"; render(); return; }
+  sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey, {auth: {persistSession: true, autoRefreshToken: true, detectSessionInUrl: true}});
+  sb.auth.onAuthStateChange((ev, s) => {
+    if (ev === "PASSWORD_RECOVERY") { setTimeout(openNewPassword, 50); }
+    if ((ev === "SIGNED_IN" || ev === "INITIAL_SESSION") && s && mode !== "cloud") startCloud(s);
+    else if (ev === "TOKEN_REFRESHED" && s) session = s;
+  });
+  let s = null;
+  try { ({data: {session: s}} = await sb.auth.getSession()); } catch {}
+  if (s) { if (mode !== "cloud") startCloud(s); }
+  else if (lsGet("qalta-skip-auth") === "1") { mode = "local"; render(); }
+  else { mode = "auth"; render(); }
+}
+async function startCloud(s){
+  if (mode === "cloud" && session && session.user.id === s.user.id) return;
+  session = s;
+  if (meta.uid && meta.uid !== s.user.id) { S.settings = defaults(); S.months = {}; meta.dirty = {}; bump(); }
+  const firstLink = meta.uid !== s.user.id;
+  meta.uid = s.user.id; saveMeta();
+  mode = "cloud"; render();
+  subscribeRealtime();
+  if (!navigator.onLine) { setSync("offline"); return; }
+  try {
+    const {data, error} = await sb.from("qalta_docs").select("path,data");
+    if (error) throw error;
+    if (!data.length) {
+      // new account: upload what this device has
+      meta.dirty.settings = 1; for (const k of Object.keys(S.months)) meta.dirty["m/" + k] = 1; saveMeta();
+    } else {
+      if (firstLink) { meta.dirty = {}; saveMeta(); S.months = {}; }
+      applyRemote(data); render();
+    }
+    flush();
+  } catch (e) { setSync("err"); toast("Серверге қосылу мүмкін болмады. Деректер осы құрылғыда сақталып тұр."); }
+}
+function subscribeRealtime(){
+  if (rtChannel || !sb || !session) return;
+  rtChannel = sb.channel("qalta-" + session.user.id)
+    .on("postgres_changes", {event: "*", schema: "public", table: "qalta_docs", filter: "user_id=eq." + session.user.id}, p => {
+      if (mode === "cloud" && p.new && applyRemote([p.new])) render();
+    }).subscribe();
+}
+window.addEventListener("online", () => { pull(); });
+window.addEventListener("offline", () => { if (mode === "cloud") setSync("offline"); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pull(); });
+async function signOut(){
+  try { if (rtChannel) { await sb.removeChannel(rtChannel); rtChannel = null; } await sb.auth.signOut(); } catch {}
+  session = null; meta = {uid: null, dirty: {}}; saveMeta();
+  try { localStorage.removeItem(LS_KEY); localStorage.removeItem("qalta-skip-auth"); } catch {}
+  S.settings = defaults(); S.months = {}; bump(); mode = "auth"; ui.tab = "home"; ui.sub = null; render();
+}
+
+/* ---------- auth screen ---------- */
+let authMode = "in";
+function renderAuth(){
+  $("#main").innerHTML = `<div style="max-width:400px;margin:6vh auto 0" class="stack">
+    <div class="brand" style="justify-content:center;flex-direction:column;gap:12px;text-align:center"><div class="logo" style="width:64px;height:64px;border-radius:18px;font-size:28px">₸</div><h1 class="disp" style="font-size:26px">Қалта</h1><p class="muted" style="margin:0">Ақшаңыз қайда кететінін біліңіз. Телефон мен ноутта бірдей.</p></div>
+    <form class="card section" id="auth-form" novalidate>
+      <div class="seg"><button type="button" data-am="in" aria-pressed="${authMode === "in"}">Кіру</button><button type="button" data-am="up" aria-pressed="${authMode === "up"}">Тіркелу</button></div>
+      <div class="field"><label for="au-email">Email</label><input class="inp" id="au-email" type="email" autocomplete="email" inputmode="email" required></div>
+      <div class="field"><label for="au-pass">Құпиясөз</label><input class="inp" id="au-pass" type="password" autocomplete="${authMode === "up" ? "new-password" : "current-password"}" minlength="6" required>${authMode === "up" ? `<span class="small muted">Кемінде 6 таңба.</span>` : ""}</div>
+      <div class="err" id="au-err" role="alert"></div>
+      <button class="btn primary block" type="submit" id="au-go">${authMode === "up" ? "Тіркелу" : "Кіру"}</button>
+      ${authMode === "in" ? `<button class="btn ghost block" type="button" id="au-forgot">Құпиясөзді ұмыттым</button>` : ""}
+    </form>
+    <button class="btn ghost block" id="au-skip" type="button">Аккаунтсыз, тек осы құрылғыда қолдану</button>
+  </div>`;
+  const f = $("#auth-form"), err = $("#au-err"), go = $("#au-go");
+  $$("[data-am]").forEach(b => b.onclick = () => { authMode = b.dataset.am; const e = $("#au-email").value; renderAuth(); $("#au-email").value = e; });
+  $("#au-skip").onclick = () => { lsSet("qalta-skip-auth", "1"); mode = "local"; render(); };
+  const fg = $("#au-forgot");
+  if (fg) fg.onclick = async () => {
+    const email = $("#au-email").value.trim();
+    if (!email) { err.textContent = "Алдымен email жазыңыз."; return; }
+    const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+    err.style.color = error ? "" : "var(--pos)";
+    err.textContent = error ? "Хат жіберілмеді: " + error.message : "Құпиясөзді қалпына келтіру хаты поштаңызға жіберілді.";
+  };
+  f.onsubmit = async e => {
+    e.preventDefault(); err.style.color = ""; err.textContent = "";
+    const email = $("#au-email").value.trim(), password = $("#au-pass").value;
+    if (!email || password.length < 6) { err.textContent = "Email мен кемінде 6 таңбалы құпиясөз жазыңыз."; return; }
+    if (!navigator.onLine) { err.textContent = "Интернет жоқ. Кіру үшін интернет керек."; return; }
+    go.disabled = true; go.textContent = "Күте тұрыңыз…";
+    try {
+      if (authMode === "up") {
+        const {data, error} = await sb.auth.signUp({email, password, options: {emailRedirectTo: location.origin + location.pathname}});
+        if (error) throw error;
+        if (data.session) startCloud(data.session);
+        else { err.style.color = "var(--pos)"; err.textContent = "Поштаңызға растау хаты жіберілді. Хаттағы сілтемені басыңыз, содан кейін осында кіріңіз."; authMode = "in"; }
+      } else {
+        const {data, error} = await sb.auth.signInWithPassword({email, password});
+        if (error) throw error;
+        startCloud(data.session);
+      }
+    } catch (x) {
+      const m = String(x && x.message || "");
+      err.textContent = /Invalid login/i.test(m) ? "Email немесе құпиясөз қате." : /not confirmed/i.test(m) ? "Email әлі расталмаған. Поштаңыздағы хатты ашыңыз." : /already registered/i.test(m) ? "Бұл email тіркелген. «Кіру» бөлімін таңдаңыз." : "Қате: " + m;
+    }
+    if (go.isConnected) { go.disabled = false; go.textContent = authMode === "up" ? "Тіркелу" : "Кіру"; }
+  };
+}
+function openNewPassword(){
+  openSheet("Жаңа құпиясөз", `<div class="field"><label for="np">Жаңа құпиясөз</label><input class="inp" id="np" type="password" autocomplete="new-password" minlength="6"></div><div class="err" id="np-err"></div><button class="btn primary block" id="np-ok">Сақтау</button>`, b => {
+    $("#np-ok", b).onclick = async () => {
+      const p = $("#np", b).value; if (p.length < 6) { $("#np-err", b).textContent = "Кемінде 6 таңба."; return; }
+      const {error} = await sb.auth.updateUser({password: p});
+      if (error) $("#np-err", b).textContent = error.message; else { closeSheet(); toast("Құпиясөз өзгертілді"); }
+    };
+  });
+}
+
+/* ---------- theme ---------- */
+function themePref(){ return lsGet("qalta-theme") || "system"; }
+function applyTheme(){
+  const p = themePref(), root = document.documentElement;
+  if (p === "light" || p === "dark") { root.setAttribute("data-theme", p); root.dataset.qaltaTheme = "1"; }
+  else if (root.dataset.qaltaTheme) { root.removeAttribute("data-theme"); delete root.dataset.qaltaTheme; }
+}
+
+/* ---------- icons ---------- */
+const I = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
+  ops: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>',
+  goal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></svg>',
+  more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
+  left: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  right: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+};
+const TABS = [["home","Басты",I.home],["ops","Операциялар",I.ops],["an","Талдау",I.chart],["goals","Мақсаттар",I.goal],["more","Тағы",I.more]];
+
+/* ---------- render ---------- */
+function syncHTML(){
+  const m = {cloud: "Синхрон", local: "Осы құрылғыда", demo: "Мысал режимі", loading: "…"}[mode] || "";
+  const cls = mode === "cloud" ? (syncState === "err" ? "err" : syncState === "busy" || syncState === "offline" ? "busy" : "ok") : "";
+  const txt = mode === "cloud" && syncState === "busy" ? "Сақталуда…" : mode === "cloud" && syncState === "err" ? "Синхрон қатесі" : mode === "cloud" && syncState === "offline" ? "Офлайн" : m;
+  return `<span class="sync ${cls}" id="sync" title="Деректер қайда сақталады"><i></i>${txt}</span>`;
+}
+function render(){
+  const authOn = mode === "auth";
+  $("#tabbar").hidden = authOn; $("#fab").hidden = authOn; $("#side").hidden = authOn;
+  $("#app").style.gridTemplateColumns = authOn ? "1fr" : "";
+  if (authOn) { renderAuth(); return; }
+  if (!S.settings) return;
+  const tabBtns = TABS.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
+  $("#tabbar").innerHTML = tabBtns;
+  $("#side").innerHTML = `<div class="brand"><div class="logo">₸</div><b>Қалта</b></div>${tabBtns}<button class="btn primary add-btn" data-act="newTx">${I.plus} Операция қосу</button>`;
+  const V = {home: vHome, ops: vOps, an: vAnalysis, goals: vGoals, more: vMore}[ui.tab] || vHome;
+  const titles = {home: "", ops: "Операциялар", an: "Талдау", goals: "Мақсаттар", more: "Тағы"};
+  let banner = "";
+  if (mode === "demo") banner = `<div class="banner demo"><span>Бұл мысал деректер. Ештеңе сақталмайды.</span><button class="btn sm primary" data-act="exitDemo">Өз деректеріме оралу</button></div>`;
+  else if (mode === "local" && hasCloud()) banner = `<div class="banner"><span>Деректер тек осы құрылғыда. Телефон мен ноутта бірдей болу үшін аккаунтқа кіріңіз.</span><button class="btn sm primary" data-act="login">Кіру</button></div>`;
+  const scrollY = window.scrollY;
+  $("#main").innerHTML = `${banner}<div class="topbar"><div class="brand"><div class="logo">₸</div><b>${ui.tab === "home" ? "Қалта" : esc(titles[ui.tab])}</b></div>${syncHTML()}</div>${V()}`;
+  window.scrollTo(0, scrollY);
+}
+
+/* ---------- views: home ---------- */
+function txTitle(t){
+  if (t.t === "tr") { const a = acc(t.acc), b = acc(t.to); return `${a ? a.name : "?"} → ${b ? b.name : "?"}`; }
+  if (t.t === "goal") { const g = goal(t.g); return (t.gd < 0 ? "Мақсаттан алу: " : "Жинаққа: ") + (g ? g.name : "мақсат"); }
+  if (t.t === "debt") { const d = debt(t.d); const p = d ? d.person : "?"; if (!d) return "Қарыз"; if (d.dir === "lent") return t.rep ? `${p} қарызын қайтарды` : `${p} қарызға алды`; return t.rep ? `${p}-ге қарыз қайтардым` : `${p}-ден қарыз алдым`; }
+  const c = cat(t.c); return c ? c.name : "Санатсыз";
+}
+function txIcon(t){
+  if (t.t === "tr") return "🔁"; if (t.t === "goal") { const g = goal(t.g); return g ? g.icon : "🎯"; } if (t.t === "debt") return "🤝";
+  const c = cat(t.c); return c ? c.icon : "•";
+}
+function txAmount(t){
+  let sign = 0;
+  if (t.t === "exp") sign = -1; else if (t.t === "inc") sign = 1; else if (t.t === "debt") sign = t.acc ? (t.s || 1) : 0; else if (t.t === "goal") sign = t.acc ? -(t.gd || 1) : 0;
+  const cls = sign > 0 ? "pos" : "";
+  return `<span class="amt num ${cls}">${sign ? fmtS(sign * t.a) : fmt(t.a)}</span>`;
+}
+function txRow(t){
+  const a = acc(t.acc);
+  const sub = [t.t === "tr" ? "Аударым" : a ? a.name : "", t.n].filter(Boolean).map(esc).join(" · ");
+  return `<button class="row" data-act="editTx" data-id="${esc(t.id)}" data-m="${mkey(t.date)}"><span class="ico">${esc(txIcon(t))}</span><span class="mid"><span class="t" style="display:block">${esc(txTitle(t))}</span><span class="s" style="display:block">${sub || "&nbsp;"}</span></span>${txAmount(t)}</button>`;
+}
+const sortTx = arr => arr.slice().sort((a, b) => b.date.localeCompare(a.date) || (b.ts || 0) - (a.ts || 0));
+
+function dueRecurring(){
+  const k = curMonth(), day = new Date().getDate(), dim = daysIn(k);
+  return S.settings.recurring.filter(r => r.last !== k && Math.min(r.day, dim) - day <= 3).sort((a, b) => a.day - b.day);
+}
+function vHome(){
+  const k = curMonth(), st = monthStats(k), bal = balances(), total = Object.values(bal).reduce((a, b) => a + b, 0);
+  const dim = daysIn(k), day = new Date().getDate(), left = dim - day + 1;
+  const free = st.inc - st.exp - Math.max(0, st.sav);
+  let dayLine;
+  if (st.inc <= 0) dayLine = `<span>Осы айдағы кірісті қосыңыз — күндік лимит есептеледі.</span>`;
+  else if (free > 0) dayLine = `<span>Бүгін жұмсауға болады</span><b class="num">≈ ${fmt(free / left)}</b><span style="opacity:.8">· айдың соңына ${left} күн</span>`;
+  else dayLine = `<span>Бұл айда шығын кірістен ${fmt(-free)} асып кетті.</span>`;
+
+  const accs = S.settings.accounts.map(a => `<button class="acc" data-act="editAcc" data-id="${esc(a.id)}"><span class="ic">${esc(a.icon)}</span><small>${esc(a.name)}</small><b class="num ${bal[a.id] < 0 ? "neg" : ""}">${fmt(bal[a.id])}</b></button>`).join("") + `<button class="acc add" data-act="editAcc">+ Шот</button>`;
+
+  const notes = [];
+  for (const r of dueRecurring()) {
+    const late = r.day < day;
+    notes.push(`<div class="note ${late ? "warn" : ""}"><span class="ico">${esc((cat(r.c) || {}).icon || "🔔")}</span><div class="mid"><b>${esc(r.name)}</b> · <span class="num">${fmt(r.a)}</span><div class="small muted">${late ? "Мерзімі өтті: " : "Төлем күні: "}${r.day}-${MONTHS[+k.slice(5)-1].toLowerCase()}</div></div><div class="btns"><button class="btn sm primary" data-act="payRec" data-id="${esc(r.id)}">${r.type === "inc" ? "Түсті" : "Төледім"}</button><button class="btn sm ghost" data-act="skipRec" data-id="${esc(r.id)}">Өткізу</button></div></div>`);
+  }
+  for (const [cid, lim] of Object.entries(S.settings.budgets)) {
+    const spent = st.byCat[cid] || 0, c = cat(cid);
+    if (!c || !lim || spent < lim * 0.8) continue;
+    const over = spent > lim;
+    notes.push(`<div class="note ${over ? "accent" : "warn"}"><span class="ico">${esc(c.icon)}</span><div class="mid"><b>${esc(c.name)}</b>: ${over ? "лимиттен асты" : "лимиттің " + Math.round(spent / lim * 100) + "%"}<div class="small muted num">${fmt(spent)} / ${fmt(lim)}</div></div></div>`);
+  }
+  const openDebts = S.settings.debts.filter(d => !d.closed && d.due && d.due <= today());
+  for (const d of openDebts) notes.push(`<div class="note warn"><span class="ico">🤝</span><div class="mid"><b>${esc(d.person)}</b> · ${d.dir === "lent" ? "сізге қайтаруы керек" : "сіз қайтаруыңыз керек"}<div class="small muted num">${fmt(d.amount - debtRepaid(d))} · мерзімі ${esc(d.due)}</div></div><button class="btn sm ghost" data-act="goDebts">Ашу</button></div>`);
+
+  const goalsMini = S.settings.goals.slice(0, 3).map(g => { const s = goalSaved(g), p = g.target ? Math.min(100, s / g.target * 100) : 0; return `<button class="row" data-act="tab" data-tab="goals"><span class="ico">${esc(g.icon)}</span><span class="mid"><span class="t" style="display:block">${esc(g.name)}</span><span class="bar" style="display:block;margin-top:6px"><i style="width:${p}%"></i></span></span><span class="amt num small">${Math.round(p)}%</span></button>`; }).join("");
+
+  const recent = sortTx(st.txs).slice(0, 8);
+  const hasAny = allTx().length > 0;
+  const onboarding = !hasAny ? `<div class="card section"><h2 style="font-size:16px">Бастайық</h2><ol class="tips small"><li>Шоттардағы қазіргі ақшаңызды енгізіңіз (жоғарыдағы шотты басыңыз).</li><li>Әр шығынды «+» батырмасымен жазып отырыңыз — 5 секунд.</li><li>Мақсат қойып, оған ақша жинаңыз. Ай соңында «Талдау» бетінен ақшаның қайда кеткенін көресіз.</li></ol><div class="btns"><button class="btn primary" data-act="newTx">Бірінші шығынды қосу</button>${mode !== "demo" ? `<button class="btn ghost" data-act="demo">Мысалмен танысу</button>` : ""}</div></div>` : "";
+
+  return `<div class="stack">
+  <section class="hero"><div class="lbl">Барлық шоттарда</div><div class="big num">${fmt(total)}</div>
+    <div class="hero-row"><div><small>Кіріс · ${MSHORT[+k.slice(5)-1]}</small><b class="num">${fmt(st.inc)}</b></div><div><small>Шығын</small><b class="num">${fmt(st.exp)}</b></div><div><small>Жинаққа</small><b class="num">${fmt(st.sav)}</b></div></div>
+    <div class="hero-day">${dayLine}</div></section>
+  <section class="section"><div class="sec-h"><h2>Шоттар</h2><button class="link" data-act="newTx" data-type="tr">Аудару</button></div><div class="hscroll">${accs}</div></section>
+  ${notes.length ? `<section class="section"><div class="sec-h"><h2>Назар аударыңыз</h2></div>${notes.join("")}</section>` : ""}
+  ${onboarding}
+  <div class="grid2">
+  <section class="card section"><div class="sec-h"><h2>Осы айдағы операциялар</h2><button class="link" data-act="tab" data-tab="ops">Барлығы</button></div>${recent.length ? `<div class="list">${recent.map(txRow).join("")}</div>` : `<div class="empty">Бұл айда әзірге операция жоқ.</div>`}</section>
+  <section class="card section"><div class="sec-h"><h2>Мақсаттар</h2><button class="link" data-act="${S.settings.goals.length ? "tab" : "editGoal"}" data-tab="goals">${S.settings.goals.length ? "Барлығы" : "+ Қосу"}</button></div>${goalsMini ? `<div class="list">${goalsMini}</div>` : `<div class="empty"><b>Не үшін жинайсыз?</b>Телефон, демалыс, қауіпсіздік қоры — мақсат қойып, депозит сияқты толтырып отырыңыз.</div>`}</section>
+  </div></div>`;
+}
+
+/* ---------- views: operations ---------- */
+function monthNav(key, act){
+  const next = shiftMonth(key, 1);
+  return `<div class="monthnav"><button data-act="${act}" data-d="-1" aria-label="Алдыңғы ай">${I.left}</button><span>${monthLabel(key)}</span><button data-act="${act}" data-d="1" aria-label="Келесі ай" ${next > curMonth() ? "disabled" : ""}>${I.right}</button></div>`;
+}
+function vOps(){
+  const k = ui.opsMonth, st = monthStats(k);
+  let txs = st.txs;
+  const T = ui.opsType;
+  if (T !== "all") txs = txs.filter(t => T === "other" ? (t.t === "goal" || t.t === "debt") : t.t === T);
+  if (ui.opsCat) txs = txs.filter(t => t.c === ui.opsCat);
+  const q = ui.opsQ.trim().toLowerCase();
+  if (q) txs = txs.filter(t => (txTitle(t) + " " + (t.n || "") + " " + ((acc(t.acc) || {}).name || "")).toLowerCase().includes(q));
+  const groups = {};
+  for (const t of sortTx(txs)) (groups[t.date] = groups[t.date] || []).push(t);
+  const typeChips = [["all","Барлығы"],["exp","Шығын"],["inc","Кіріс"],["tr","Аударым"],["other","Жинақ, қарыз"]].map(([v, l]) => `<button class="chip" data-act="opsType" data-v="${v}" aria-pressed="${T === v}">${l}</button>`).join("");
+  const catOpts = `<option value="">Барлық санаттар</option>` + S.settings.cats.map(c => `<option value="${esc(c.id)}" ${ui.opsCat === c.id ? "selected" : ""}>${esc(c.icon + " " + c.name)}</option>`).join("");
+  const list = Object.keys(groups).map(d => { const exp = groups[d].filter(t => t.t === "exp").reduce((s, t) => s + t.a, 0); return `<div class="day-h"><span>${esc(dayLabel(d))}</span><span class="num">${exp ? "−" + fmt(exp) : ""}</span></div><div class="list">${groups[d].map(txRow).join("")}</div>`; }).join("");
+  return `<div class="stack">
+    <div class="sec-h" style="flex-wrap:wrap">${monthNav(k, "opsMonth")}<span class="small muted num">Кіріс <b class="pos">${fmt(st.inc)}</b> · Шығын <b>${fmt(st.exp)}</b></span></div>
+    <div class="chips">${typeChips}</div>
+    <div class="frow"><input class="inp" id="ops-q" type="search" placeholder="Іздеу: кафе, Kaspi…" value="${esc(ui.opsQ)}" aria-label="Іздеу"><select class="inp" id="ops-cat" aria-label="Санат">${catOpts}</select></div>
+    <section class="card">${list || `<div class="empty"><b>Операция табылмады</b>Сүзгіні өзгертіп көріңіз немесе жаңа операция қосыңыз.</div>`}</section>
+  </div>`;
+}
+
+/* ---------- views: analysis ---------- */
+const SERIES = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)","var(--s7)"];
+function donutSVG(parts, total){
+  const R = 70, C = 2 * Math.PI * R; let off = 0;
+  const segs = parts.map(p => {
+    const len = total ? p.v / total * C : 0; const gap = parts.length > 1 ? Math.min(2, len / 2) : 0;
+    const s = `<circle cx="90" cy="90" r="${R}" fill="none" stroke="${p.color}" stroke-width="24" stroke-dasharray="${Math.max(0, len - gap)} ${C}" stroke-dashoffset="${-off}" data-tip="${esc(p.label + ": " + fmt(p.v) + " · " + Math.round(p.v / total * 100) + "%")}" style="pointer-events:stroke"/>`;
+    off += len; return s;
+  }).join("");
+  return `<svg class="chart donut" viewBox="0 0 180 180" role="img" aria-label="Шығындардың санаттар бойынша бөлінуі"><circle cx="90" cy="90" r="${R}" fill="none" stroke="var(--surface-2)" stroke-width="24"/><g transform="rotate(-90 90 90)">${segs}</g><text x="90" y="84" text-anchor="middle" style="font-size:11px">Шығын</text><text x="90" y="104" text-anchor="middle" class="num" style="font-size:16px;font-weight:700;fill:var(--text)">${esc(fmtK(total))}</text></svg>`;
+}
+function niceMax(v){ if (v <= 0) return 1; const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+function barPath(x, y, w, h, r){ if (h <= 0) return ""; r = Math.min(r, w / 2, h); return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; }
+function dailySVG(k, byDay){
+  const n = daysIn(k), W = 480, H = 200, L = 58, B = 22, T = 10, pw = W - L - 6, ph = H - B - T;
+  const vals = Array.from({length: n}, (_, i) => byDay[i + 1] || 0);
+  const max = niceMax(Math.max(...vals)), slot = pw / n, bw = Math.max(3, slot - 3);
+  const ty = v => T + ph - v / max * ph;
+  const isCur = k === curMonth(), td = new Date().getDate();
+  const passed = isCur ? td : n, avg = vals.slice(0, passed).reduce((a, b) => a + b, 0) / Math.max(1, passed);
+  let g = "";
+  for (const f of [0, .5, 1]) { const y = ty(max * f); g += `<line x1="${L}" x2="${W - 6}" y1="${y}" y2="${y}" stroke="${f ? "var(--grid)" : "var(--axis)"}" stroke-width="1"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" class="num">${esc(fmtK(max * f))}</text>`; }
+  const bars = vals.map((v, i) => { const x = L + i * slot + (slot - bw) / 2; const h = v / max * ph; const future = isCur && i + 1 > td; return `<g data-tip="${esc((i + 1) + " " + MONTHS[+k.slice(5) - 1].toLowerCase() + ": " + fmt(v))}"><rect x="${L + i * slot}" y="${T}" width="${slot}" height="${ph}" fill="transparent"/>${h > 0 ? `<path d="${barPath(x, ty(v), bw, h, 3)}" fill="${isCur && i + 1 === td ? "var(--accent)" : "var(--s1)"}" opacity="${future ? .3 : 1}"/>` : ""}</g>`; }).join("");
+  const ticks = [1, 5, 10, 15, 20, 25, n].filter((v, i, a) => a.indexOf(v) === i && !(v === 25 && n - 25 < 3 && v !== n)).map(d => `<text x="${L + (d - .5) * slot}" y="${H - 6}" text-anchor="middle" class="num">${d}</text>`).join("");
+  const ay = ty(avg);
+  const avgLine = avg > 0 ? `<line x1="${L}" x2="${W - 6}" y1="${ay}" y2="${ay}" stroke="var(--text)" stroke-width="1" stroke-dasharray="4 4" opacity=".55"/><text x="${W - 8}" y="${ay - 5}" text-anchor="end" style="fill:var(--text)">орташа ${esc(fmtK(avg))}/күн</text>` : "";
+  return `<svg class="chart wide" viewBox="0 0 ${W} ${H}" role="img" aria-label="Күндік шығындар">${g}${bars}${avgLine}${ticks}</svg>`;
+}
+function trendSVG(end){
+  const keys = Array.from({length: 6}, (_, i) => shiftMonth(end, i - 5));
+  const data = keys.map(k => { const s = monthStats(k); return {k, inc: s.inc, exp: s.exp}; });
+  const W = 480, H = 210, L = 58, B = 26, T = 10, pw = W - L - 6, ph = H - B - T;
+  const max = niceMax(Math.max(1, ...data.map(d => Math.max(d.inc, d.exp))));
+  const ty = v => T + ph - v / max * ph, slot = pw / 6, bw = Math.min(26, slot / 2 - 6);
+  let g = "";
+  for (const f of [0, .5, 1]) { const y = ty(max * f); g += `<line x1="${L}" x2="${W - 6}" y1="${y}" y2="${y}" stroke="${f ? "var(--grid)" : "var(--axis)"}"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" class="num">${esc(fmtK(max * f))}</text>`; }
+  const bars = data.map((d, i) => { const cx = L + i * slot + slot / 2; const m = +d.k.slice(5) - 1;
+    return `<g data-tip="${esc(MONTHS[m] + ": кіріс " + fmt(d.inc) + ", шығын " + fmt(d.exp))}"><rect x="${L + i * slot}" y="${T}" width="${slot}" height="${ph}" fill="transparent"/><path d="${barPath(cx - bw - 1, ty(d.inc), bw, d.inc / max * ph, 4)}" fill="var(--inc)"/><path d="${barPath(cx + 1, ty(d.exp), bw, d.exp / max * ph, 4)}" fill="var(--exp)"/><text x="${cx}" y="${H - 6}" text-anchor="middle" style="${d.k === end ? "fill:var(--text);font-weight:700" : ""}">${MSHORT[m]}</text></g>`; }).join("");
+  return `<div class="legend"><span><i style="background:var(--inc)"></i>Кіріс</span><span><i style="background:var(--exp)"></i>Шығын</span></div><svg class="chart wide" viewBox="0 0 ${W} ${H}" role="img" aria-label="Соңғы 6 айдағы кіріс пен шығын">${g}${bars}</svg>`;
+}
+function avgMonthlyExp(n){ let s = 0, c = 0; for (let i = 1; i <= n; i++) { const e = monthStats(shiftMonth(curMonth(), -i)).exp; if (e > 0) { s += e; c++; } } if (!c) { const e = monthStats(curMonth()).exp; return e; } return s / c; }
+function vAnalysis(){
+  const k = ui.anMonth, st = monthStats(k), prev = monthStats(shiftMonth(k, -1));
+  const net = st.inc - st.exp;
+  const saveRate = st.inc > 0 ? (st.inc - st.exp) / st.inc * 100 : null;
+  const kp = (l, v, extra) => `<div class="kpi"><small>${l}</small><b class="num">${v}</b>${extra ? `<em>${extra}</em>` : ""}</div>`;
+  const dExp = prev.exp > 0 ? (st.exp - prev.exp) / prev.exp * 100 : null;
+  const kpis = `<div class="kpis">${kp("Кіріс", fmt(st.inc))}${kp("Шығын", fmt(st.exp), dExp === null ? "" : `өткен аймен: ${dExp > 0 ? "+" : ""}${Math.round(dExp)}%`)}${kp("Айырма", `<span class="${net < 0 ? "neg" : "pos"}">${fmtS(net)}</span>`)}${kp("Үнемдеу үлесі", saveRate === null ? "—" : Math.round(saveRate) + "%", "кірістің қанша бөлігі қалды")}</div>`;
+
+  const cats = Object.entries(st.byCat).map(([id, v]) => ({id, v, c: cat(id)})).sort((a, b) => b.v - a.v);
+  const top = cats.slice(0, 7), rest = cats.slice(7).reduce((s, x) => s + x.v, 0);
+  const parts = top.map((x, i) => ({label: x.c ? x.c.name : "Басқа", v: x.v, color: SERIES[i]}));
+  if (rest > 0) parts.push({label: "Қалғаны", v: rest, color: "var(--s-other)"});
+  const catRows = cats.map((x, i) => { const pv = prev.byCat[x.id] || 0; const d = pv ? Math.round((x.v - pv) / pv * 100) : null; const lim = S.settings.budgets[x.id];
+    return `<div class="catrow"><span class="sw" style="background:${i < 7 ? SERIES[i] : "var(--s-other)"}"></span><span class="nm">${esc(x.c ? x.c.icon + " " + x.c.name : "Басқа")}<span class="small muted" style="display:block">${Math.round(x.v / st.exp * 100)}%${lim ? ` · лимит ${fmt(lim)}` : ""}</span></span><span class="v num">${fmt(x.v)}<small>${d === null ? "жаңа" : (d > 0 ? "▲ +" : d < 0 ? "▼ " : "") + d + "%"}</small></span></div>`; }).join("");
+  const donut = cats.length ? `<div class="donut-wrap">${donutSVG(parts, st.exp)}<div>${catRows}</div></div>` : `<div class="empty">Бұл айда шығын жазылмаған.</div>`;
+
+  // 50/30/20
+  let rule = "";
+  if (st.inc > 0) {
+    const pN = st.need / st.inc * 100, pW = st.want / st.inc * 100, pS = Math.max(0, 100 - pN - pW);
+    const over = pN + pW > 100;
+    const verdict = over ? "Шығын кірістен асты — алдымен «қалаулар» санатын қысқартыңыз." : pS >= 20 ? "Керемет: кірістің кемінде 20%-ы сақталып отыр." : pW > 30 ? `«Қалауларға» ${Math.round(pW)}% кетті. 30%-ға түсірсеңіз, айына ≈ ${fmt(st.want - st.inc * .3)} үнемдейсіз.` : `Жинаққа ${Math.round(pS)}% қалды. Мақсат — 20%.`;
+    const w = v => Math.max(0, Math.min(100, v));
+    rule = `<section class="card section"><div class="sec-h"><h2>50 / 30 / 20 ережесі</h2></div><p class="small muted" style="margin:0">Кірістің 50%-ы қажеттіліктерге, 30%-ы қалауларға, 20%-ы жинаққа. Санаттың түрін «Тағы → Санаттар» бөлімінде өзгертесіз.</p>
+      <div class="split" role="img" aria-label="Кірістің бөлінуі"><div style="width:${w(pN)}%;background:var(--s1)" data-tip="Қажеттілік ${Math.round(pN)}%"></div><div style="width:${w(Math.min(pW, 100 - pN))}%;background:var(--s4)" data-tip="Қалау ${Math.round(pW)}%"></div><div style="width:${w(pS)}%;background:var(--s3)" data-tip="Жинақ ${Math.round(pS)}%"></div></div>
+      <div class="rule-grid"><div><small><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--s1)"></i> Қажеттілік · 50%</small><b class="num">${Math.round(pN)}%</b></div><div><small><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--s4)"></i> Қалау · 30%</small><b class="num">${Math.round(pW)}%</b></div><div><small><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--s3)"></i> Жинақ · 20%</small><b class="num">${over ? "0" : Math.round(pS)}%</b></div></div>
+      <div class="note ${pS >= 20 && !over ? "" : "warn"}" style="margin-top:4px">${esc(verdict)}</div></section>`;
+  }
+
+  // limits
+  const limRows = Object.entries(S.settings.budgets).filter(([id, v]) => v > 0 && cat(id)).map(([id, lim]) => { const sp = st.byCat[id] || 0, p = sp / lim * 100, c = cat(id);
+    return `<div style="display:flex;flex-direction:column;gap:5px;padding:6px 0"><div class="sec-h small"><span>${esc(c.icon + " " + c.name)}</span><span class="num ${p > 100 ? "neg" : ""}">${fmt(sp)} / ${fmt(lim)}</span></div><div class="bar"><i class="${p > 100 ? "over" : p > 80 ? "warn" : "ok"}" style="width:${Math.min(100, p)}%"></i></div></div>`; }).join("");
+
+  // insights
+  const ins = [];
+  if (cats[0]) ins.push(`Ең көп ақша <b>${esc(cats[0].c ? cats[0].c.name : "Басқа")}</b> санатына кетті: ${fmt(cats[0].v)} (${Math.round(cats[0].v / st.exp * 100)}%).`);
+  const grow = cats.map(x => ({...x, pv: prev.byCat[x.id] || 0})).filter(x => x.pv > 0 && x.v - x.pv > 0).sort((a, b) => (b.v - b.pv) - (a.v - a.pv))[0];
+  if (grow) ins.push(`<b>${esc(grow.c ? grow.c.name : "")}</b> шығыны өткен аймен салыстырғанда ${fmt(grow.v - grow.pv)}-ге өсті.`);
+  const days = Object.entries(st.byDay).sort((a, b) => b[1] - a[1])[0];
+  if (days) ins.push(`Ең қымбат күн — <b>${days[0]} ${MONTHS[+k.slice(5) - 1].toLowerCase()}</b>: ${fmt(days[1])}.`);
+  const small = st.txs.filter(t => t.t === "exp" && t.a <= 3000);
+  if (small.length >= 8) ins.push(`${small.length} ұсақ шығын (3 000 ₸-ге дейін) жиналып, <b>${fmt(small.reduce((s, t) => s + t.a, 0))}</b> болды. Ұсақ шығындар байқалмай көп ақша алады.`);
+  const avgE = avgMonthlyExp(3), tb = totalBalance();
+  if (avgE > 0) { const m = tb / avgE; ins.push(`Қауіпсіздік қоры: шоттардағы ақша ≈ <b>${m.toFixed(1).replace(".", ",")} айға</b> жетеді. Кеңес — кемінде 3–6 айлық шығын.`); }
+  if (st.sav > 0) ins.push(`Бұл айда мақсаттарға <b>${fmt(st.sav)}</b> салдыңыз. Жарайсыз!`);
+
+  return `<div class="stack">
+    <div class="sec-h">${monthNav(k, "anMonth")}</div>
+    ${kpis}
+    <div class="grid2">
+      <section class="card section span2"><div class="sec-h"><h2>Ақша қайда кетті</h2><span class="small muted">өткен аймен салыстыру</span></div>${donut}</section>
+      <section class="card section span2"><div class="sec-h"><h2>Күн сайынғы шығын</h2></div>${dailySVG(k, st.byDay)}</section>
+      ${ins.length ? `<section class="card section"><div class="sec-h"><h2>Қорытынды</h2></div><div>${ins.map(x => `<div class="insight"><span class="dot"></span><span>${x}</span></div>`).join("")}</div></section>` : ""}
+      ${rule}
+      <section class="card section"><div class="sec-h"><h2>6 айлық динамика</h2></div>${trendSVG(k)}</section>
+      <section class="card section"><div class="sec-h"><h2>Айлық лимиттер</h2><button class="link" data-act="goSub" data-sub="budgets">Баптау</button></div>${limRows || `<div class="empty small">Лимит қойылмаған. Мысалы, «Кафеге айына 30 000 ₸» деп қойсаңыз, асып кетпес бұрын ескертеміз.</div>`}</section>
+    </div></div>`;
+}
+
+/* ---------- views: goals ---------- */
+function goalCalc(g){
+  const s = goalSaved(g), rest = Math.max(0, g.target - s), p = g.target ? Math.min(100, s / g.target * 100) : 0;
+  const i = (+g.rate || 0) / 1200;
+  let perMonth = null, months = null;
+  if (g.deadline) {
+    months = Math.max(1, monthsBetween(today(), g.deadline) + 1);
+    if (rest <= 0) perMonth = 0;
+    else if (i > 0) { const f = Math.pow(1 + i, months); perMonth = Math.max(0, (g.target - s * f) * i / (f - 1)); }
+    else perMonth = rest / months;
+  }
+  const yearly = i > 0 ? s * (Math.pow(1 + i, 12) - 1) : 0;
+  // pace: average contribution over last 3 months
+  let contrib = 0; const since = shiftMonth(curMonth(), -2);
+  for (const t of allTx()) if (t.t === "goal" && t.g === g.id && mkey(t.date) >= since) contrib += (t.gd || 1) * t.a;
+  const pace = contrib / 3;
+  return {s, rest, p, perMonth, months, yearly, pace};
+}
+function vGoals(){
+  const gs = S.settings.goals;
+  const total = gs.reduce((a, g) => a + goalSaved(g), 0);
+  const cards = gs.map(g => { const c = goalCalc(g);
+    let status = "";
+    if (c.rest <= 0) status = `<span class="pill ok">✓ Жиналды</span>`;
+    else if (c.perMonth !== null && c.pace > 0) status = c.pace >= c.perMonth ? `<span class="pill ok">Жоспар бойынша</span>` : `<span class="pill warn">Артта қалып барады</span>`;
+    else if (g.deadline && g.deadline < today()) status = `<span class="pill bad">Мерзімі өтті</span>`;
+    return `<section class="card goal"><div class="goal-top"><span class="ico">${esc(g.icon)}</span><div style="flex:1;min-width:0"><h3>${esc(g.name)}</h3><div class="small muted">${g.rate ? `Депозит · жылдық ${esc(String(g.rate).replace(".", ","))}%` : "Жинақ"}${g.deadline ? ` · ${esc(g.deadline.split("-").reverse().join("."))} дейін` : ""}</div></div>${status}</div>
+      <div class="goal-nums"><b class="num">${fmt(c.s)}</b><span class="muted num">/ ${fmt(g.target)} · ${Math.round(c.p)}%</span></div>
+      <div class="bar thick"><i style="width:${c.p}%"></i></div>
+      <div class="goal-meta">${c.rest > 0 ? `<span>Қалды: <b class="num">${fmt(c.rest)}</b></span>` : ""}${c.perMonth ? `<span>Айына салу керек: <b class="num">${fmt(c.perMonth)}</b></span>` : ""}${c.pace > 0 ? `<span>Соңғы 3 ай орташа: <b class="num">${fmt(c.pace)}</b></span>` : ""}${c.yearly > 0 ? `<span>Жылына пайыз ≈ <b class="num pos">+${fmt(c.yearly)}</b></span>` : ""}</div>
+      <div class="btns"><button class="btn primary sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="1">${I.plus} Салу</button><button class="btn sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="-1">Алу</button>${g.rate ? `<button class="btn sm ghost" data-act="goalInterest" data-id="${esc(g.id)}">Пайыз түсті</button>` : ""}<button class="btn sm ghost" data-act="editGoal" data-id="${esc(g.id)}">Өзгерту</button></div></section>`; }).join("");
+  return `<div class="stack">
+    <div class="kpis" style="grid-template-columns:repeat(2,1fr)"><div class="kpi"><small>Барлық жинақ</small><b class="num">${fmt(total)}</b></div><div class="kpi"><small>Осы айда салынды</small><b class="num">${fmt(monthStats(curMonth()).sav)}</b></div></div>
+    <div class="grid2">${cards}</div>
+    ${gs.length ? "" : `<div class="card empty"><b>Әзірге мақсат жоқ</b>Мысалы: «Жаңа телефон — 300 000 ₸, маусымға дейін». Депозит пайызын көрсетсеңіз, айына қанша салу керегін есептейміз.</div>`}
+    <button class="btn primary block" data-act="editGoal">${I.plus} Жаңа мақсат</button>
+  </div>`;
+}
+
+/* ---------- views: more ---------- */
+function vMore(){
+  if (ui.sub) return ({accounts: vAccounts, budgets: vBudgets, recurring: vRecurring, debts: vDebts, cats: vCats, settings: vSettings, tips: vTips}[ui.sub] || (() => ""))();
+  const it = (sub, ic, t, s) => `<button class="row" data-act="goSub" data-sub="${sub}"><span class="ico">${ic}</span><span class="mid"><span class="t" style="display:block">${t}</span><span class="s" style="display:block">${s}</span></span><span class="chev">${I.right}</span></button>`;
+  const openD = S.settings.debts.filter(d => !d.closed).length;
+  return `<div class="stack"><section class="card menu list">
+    ${it("accounts", "💳", "Шоттар", S.settings.accounts.length + " шот · " + fmt(totalBalance()))}
+    ${it("budgets", "🎚️", "Айлық лимиттер", "Санаттарға шек қою")}
+    ${it("recurring", "🔔", "Тұрақты төлемдер", S.settings.recurring.length ? S.settings.recurring.length + " төлем" : "Пәтер, интернет, жазылымдар")}
+    ${it("debts", "🤝", "Қарыздар", openD ? openD + " ашық қарыз" : "Кімге бердім, кімнен алдым")}
+    ${it("cats", "🏷️", "Санаттар", "Қосу, өзгерту, қажеттілік/қалау")}
+    ${it("tips", "📘", "Қаржылық сауаттылық", "Қысқа ережелер мен кеңестер")}
+    ${it("settings", "⚙️", "Баптаулар", "Тақырып, сақтау, экспорт")}
+  </section></div>`;
+}
+const backBar = t => `<div class="sec-h" style="justify-content:flex-start;gap:8px"><button class="x" data-act="goSub" data-sub="" aria-label="Артқа">${I.left}</button><h2 style="font-size:18px">${t}</h2></div>`;
+function vAccounts(){
+  const b = balances();
+  return `<div class="stack">${backBar("Шоттар")}<section class="card list">${S.settings.accounts.map(a => `<button class="row" data-act="editAcc" data-id="${esc(a.id)}"><span class="ico">${esc(a.icon)}</span><span class="mid"><span class="t" style="display:block">${esc(a.name)}</span><span class="s" style="display:block">Бастапқы: ${fmt(a.initial)}</span></span><span class="amt num ${b[a.id] < 0 ? "neg" : ""}">${fmt(b[a.id])}</span></button>`).join("")}</section><div class="btns"><button class="btn primary" data-act="editAcc">${I.plus} Шот қосу</button><button class="btn" data-act="newTx" data-type="tr">Шоттар арасында аудару</button></div></div>`;
+}
+function vBudgets(){
+  const st = monthStats(curMonth());
+  const rows = S.settings.cats.filter(c => c.type === "exp").map(c => { const lim = S.settings.budgets[c.id] || 0, sp = st.byCat[c.id] || 0, p = lim ? sp / lim * 100 : 0;
+    return `<div style="display:grid;grid-template-columns:1fr 130px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)"><div style="min-width:0"><div class="small" style="font-weight:600">${esc(c.icon + " " + c.name)}</div><div class="small muted num">Осы айда: ${fmt(sp)}</div>${lim ? `<div class="bar" style="margin-top:5px"><i class="${p > 100 ? "over" : p > 80 ? "warn" : "ok"}" style="width:${Math.min(100, p)}%"></i></div>` : ""}</div><input class="inp num" id="bud-${esc(c.id)}" data-bud="${esc(c.id)}" inputmode="numeric" placeholder="Лимитсіз" value="${lim || ""}" aria-label="${esc(c.name)} лимиті"></div>`; }).join("");
+  const total = Object.values(S.settings.budgets).reduce((a, b) => a + (+b || 0), 0);
+  return `<div class="stack">${backBar("Айлық лимиттер")}<p class="small muted" style="margin:0">Әр санатқа айлық шек қойыңыз. 80%-ға жеткенде және асқанда басты бетте ескерту шығады. Барлық лимит: <b class="num">${fmt(total)}</b></p><section class="card">${rows}</section></div>`;
+}
+function vRecurring(){
+  const rs = S.settings.recurring.slice().sort((a, b) => a.day - b.day);
+  const k = curMonth();
+  return `<div class="stack">${backBar("Тұрақты төлемдер")}<p class="small muted" style="margin:0">Ай сайын қайталанатын төлемдер мен кірістер. Күні жақындағанда басты бетте еске салады, бір басумен жазасыз.</p><section class="card list">${rs.map(r => `<button class="row" data-act="editRec" data-id="${esc(r.id)}"><span class="ico">${esc((cat(r.c) || {}).icon || "🔔")}</span><span class="mid"><span class="t" style="display:block">${esc(r.name)}</span><span class="s" style="display:block">Әр айдың ${r.day}-і · ${r.last === k ? "осы айда жазылды ✓" : "осы айда әлі жоқ"}</span></span><span class="amt num ${r.type === "inc" ? "pos" : ""}">${r.type === "inc" ? "+" : "−"}${fmt(r.a)}</span></button>`).join("") || `<div class="empty">Әзірге жоқ.</div>`}</section><button class="btn primary" data-act="editRec">${I.plus} Төлем қосу</button></div>`;
+}
+function vDebts(){
+  const ds = S.settings.debts.slice().sort((a, b) => (a.closed - b.closed) || (a.date < b.date ? 1 : -1));
+  const owedToMe = ds.filter(d => !d.closed && d.dir === "lent").reduce((s, d) => s + d.amount - debtRepaid(d), 0);
+  const iOwe = ds.filter(d => !d.closed && d.dir === "borrowed").reduce((s, d) => s + d.amount - debtRepaid(d), 0);
+  return `<div class="stack">${backBar("Қарыздар")}<div class="kpis" style="grid-template-columns:repeat(2,1fr)"><div class="kpi"><small>Маған қайтаруы керек</small><b class="num pos">${fmt(owedToMe)}</b></div><div class="kpi"><small>Мен қайтаруым керек</small><b class="num neg">${fmt(iOwe)}</b></div></div>
+  <section class="card list">${ds.map(d => { const left = d.amount - debtRepaid(d); return `<div class="row" style="flex-wrap:wrap"><span class="ico">${d.dir === "lent" ? "📤" : "📥"}</span><span class="mid"><span class="t" style="display:block">${esc(d.person)}</span><span class="s" style="display:block">${d.dir === "lent" ? "Мен бердім" : "Мен алдым"} · ${esc(d.date)}${d.due ? " · мерзімі " + esc(d.due) : ""}${d.note ? " · " + esc(d.note) : ""}</span></span><span class="amt num">${d.closed ? `<span class="pill ok">Жабылды</span>` : fmt(left)}</span>${d.closed ? "" : `<div class="btns" style="width:100%;padding-left:52px"><button class="btn sm primary" data-act="repay" data-id="${esc(d.id)}">${d.dir === "lent" ? "Қайтарды" : "Қайтардым"}</button><button class="btn sm ghost" data-act="editDebt" data-id="${esc(d.id)}">Өзгерту</button></div>`}</div>`; }).join("") || `<div class="empty">Қарыз жоқ. Жақсы!</div>`}</section><button class="btn primary" data-act="editDebt">${I.plus} Қарыз қосу</button></div>`;
+}
+function vCats(){
+  const grp = t => S.settings.cats.filter(c => c.type === t).map(c => `<button class="row" data-act="editCat" data-id="${esc(c.id)}"><span class="ico">${esc(c.icon)}</span><span class="mid"><span class="t" style="display:block">${esc(c.name)}</span>${t === "exp" ? `<span class="s" style="display:block">${c.group === "need" ? "Қажеттілік" : "Қалау"}</span>` : ""}</span><span class="chev">${I.right}</span></button>`).join("");
+  return `<div class="stack">${backBar("Санаттар")}<div class="grid2"><section class="card section"><div class="sec-h"><h2>Шығын</h2><button class="link" data-act="editCat" data-type="exp">+ Қосу</button></div><div class="list">${grp("exp")}</div></section><section class="card section"><div class="sec-h"><h2>Кіріс</h2><button class="link" data-act="editCat" data-type="inc">+ Қосу</button></div><div class="list">${grp("inc")}</div></section></div></div>`;
+}
+function vTips(){
+  return `<div class="stack">${backBar("Қаржылық сауаттылық")}<section class="card"><ol class="tips">
+    <li><b>Алдымен өзіңе төле.</b> Жалақы түскен күні 10–20%-ын бірден мақсатқа салыңыз, қалғанымен өмір сүріңіз.</li>
+    <li><b>50/30/20 ережесі.</b> Кірістің 50%-ы — қажеттілік, 30%-ы — қалау, 20%-ы — жинақ. «Талдау» бетінде өз үлесіңізді көресіз.</li>
+    <li><b>Қауіпсіздік қоры.</b> 3–6 айлық шығынға тең ақша бөлек депозитте тұрсын. Жұмыстан айырылсаңыз не ауырсаңыз, қарыз алмайсыз.</li>
+    <li><b>Ұсақ шығындарды санаңыз.</b> Күнде 1 500 ₸ кофе — айына 45 000 ₸, жылына 540 000 ₸.</li>
+    <li><b>Несиені ақылмен алыңыз.</b> Бөліп төлеу мен несие төлемі кірістің 30%-ынан аспасын. Жылдық тиімді сыйақы мөлшерлемесіне (ЖТСМ) қараңыз.</li>
+    <li><b>Депозит пайызы жұмыс істейді.</b> 500 000 ₸ жылдық 14%-бен айлық капитализациямен бір жылда ≈ 74 700 ₸ пайда әкеледі.</li>
+    <li><b>Ай сайын 10 минут.</b> Ай соңында «Талдау» бетін ашып, бір санатты таңдап, келесі айға лимит қойыңыз.</li>
+  </ol><p class="small muted" style="margin:12px 0 0">Бұл жалпы кеңестер, жеке қаржылық кеңес емес. Нақты депозит не несие шарттарын банктен тексеріңіз.</p></section></div>`;
+}
+function vSettings(){
+  const p = themePref();
+  const seg = [["system","Жүйе"],["light","Жарық"],["dark","Қараңғы"]].map(([v, l]) => `<button data-act="theme" data-v="${v}" aria-pressed="${p === v}">${l}</button>`).join("");
+  const email = session && session.user ? session.user.email : "";
+  const where = mode === "cloud" ? `Сіз <b>${esc(email)}</b> аккаунтымен кірдіңіз. Деректер осы құрылғыда да, серверде де сақталады: интернетсіз жазсаңыз, желі пайда болғанда өзі синхрондалады.` : mode === "demo" ? "Қазір мысал режимі қосулы — ештеңе сақталмайды." : "Деректер тек осы құрылғыда. Телефон мен ноутта бірдей болу үшін аккаунтқа кіріңіз.";
+  const accBtn = mode === "cloud" ? `<button class="btn ghost" data-act="logout">Аккаунттан шығу</button>` : mode === "local" && hasCloud() ? `<button class="btn primary" data-act="login">Аккаунтқа кіру</button>` : "";
+  return `<div class="stack">${backBar("Баптаулар")}
+    <section class="card section"><div class="flabel">Тақырып</div><div class="seg">${seg}</div></section>
+    <section class="card section"><div class="flabel">Сақтау</div><p style="margin:0" class="small">${where}</p>${accBtn ? `<div class="btns">${accBtn}</div>` : ""}<div class="btns"><button class="btn" data-act="export">Резервтік көшірме жүктеу (.json)</button><button class="btn ghost" data-act="import">Көшірмеден қалпына келтіру</button></div><div class="err" id="io-msg"></div></section>
+    <section class="card section"><div class="flabel">Мысал деректер</div><p class="small muted" style="margin:0">Қосымша толтырылған күйде қалай көрінетінін қараңыз. Сіздің деректеріңізге тимейді.</p><div>${mode === "demo" ? `<button class="btn primary" data-act="exitDemo">Мысалдан шығу</button>` : `<button class="btn" data-act="demo">Мысалмен танысу</button>`}</div></section>
+    <section class="card section"><div class="flabel">Барлығын өшіру</div><p class="small muted" style="margin:0">Барлық операциялар, мақсаттар мен баптаулар өшіріледі. Алдымен көшірме жүктеп алыңыз.</p><div><button class="btn danger" data-act="wipe" id="wipe-btn">Барлық деректерді өшіру</button></div></section>
+  </div>`;
+}
+
+/* ---------- sheet ---------- */
+let sheetClose = null;
+function openSheet(title, html, mount){
+  $("#sheet-title").textContent = title;
+  $("#sheet-body").innerHTML = html;
+  $("#sheet").hidden = false;
+  document.body.style.overflow = "hidden";
+  if (mount) mount($("#sheet-body"));
+}
+function closeSheet(){ $("#sheet").hidden = true; document.body.style.overflow = ""; $("#sheet-body").innerHTML = ""; }
+function armDelete(btn, fn){
+  if (btn.classList.contains("armed")) { fn(); return; }
+  btn.classList.add("armed"); const t = btn.textContent; btn.textContent = "Иә, өшіру";
+  setTimeout(() => { if (btn.isConnected) { btn.classList.remove("armed"); btn.textContent = t; } }, 3500);
+}
+function toast(msg){
+  let el = $("#toast");
+  if (!el) { el = document.createElement("div"); el.id = "toast"; el.setAttribute("role", "status"); el.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));z-index:70;background:var(--text);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100% - 32px);box-shadow:var(--shadow)"; document.body.appendChild(el); }
+  el.textContent = msg; el.hidden = false; clearTimeout(el._t); el._t = setTimeout(() => { el.hidden = true; }, 2800);
+}
+const accOptions = (sel, allowNone, noneLabel) => (allowNone ? `<option value="">${noneLabel || "Шотсыз"}</option>` : "") + S.settings.accounts.map(a => `<option value="${esc(a.id)}" ${a.id === sel ? "selected" : ""}>${esc(a.icon + " " + a.name)}</option>`).join("");
+const defAcc = () => (acc(ui.lastAcc) ? ui.lastAcc : (S.settings.accounts[0] || {}).id || "");
+
+/* transaction editor */
+function openTx(existing, type){
+  const t = existing ? {...existing} : {id: uid(), t: type || "exp", a: "", c: null, acc: defAcc(), to: "", date: today(), n: ""};
+  const prevKey = existing ? mkey(existing.date) : null;
+  if (existing && (t.t === "goal" || t.t === "debt")) {
+    openSheet(txTitle(t), `<div class="note"><span class="ico">${esc(txIcon(t))}</span><div class="mid"><b class="num">${fmt(t.a)}</b><div class="small muted">${esc(t.date)}${t.n ? " · " + esc(t.n) : ""}</div></div></div><p class="small muted" style="margin:0">Бұл операция ${t.t === "goal" ? "мақсатпен" : "қарызбен"} байланысты. Өшірсеңіз, ${t.t === "goal" ? "мақсаттағы сома" : "қарыз қалдығы"} мен шот қалдығы қайта есептеледі.</p><button class="btn danger block" id="tx-del">Операцияны өшіру</button>`, b => {
+      $("#tx-del", b).onclick = e => armDelete(e.currentTarget, () => { removeTx(existing); closeSheet(); toast("Өшірілді"); });
+    });
+    return;
+  }
+  const draw = () => {
+    const cats = S.settings.cats.filter(c => c.type === (t.t === "inc" ? "inc" : "exp"));
+    const body = `
+      <div class="seg" role="group" aria-label="Түрі">${[["exp","Шығын"],["inc","Кіріс"],["tr","Аударым"]].map(([v, l]) => `<button data-ttype="${v}" aria-pressed="${t.t === v}">${l}</button>`).join("")}</div>
+      <div class="field"><label for="tx-amt">Сома, ₸</label><input class="inp big num" id="tx-amt" inputmode="decimal" autocomplete="off" placeholder="0" value="${t.a === "" ? "" : esc(t.a)}"></div>
+      ${t.t === "tr" ? `<div class="frow"><div class="field"><label for="tx-acc">Қайдан</label><select class="inp" id="tx-acc">${accOptions(t.acc)}</select></div><div class="field"><label for="tx-to">Қайда</label><select class="inp" id="tx-to">${accOptions(t.to || (S.settings.accounts.find(a => a.id !== t.acc) || {}).id)}</select></div></div>`
+      : `<div class="field"><span class="flabel">Санат</span><div class="catgrid">${cats.map(c => `<button class="cat" data-cat="${esc(c.id)}" aria-pressed="${t.c === c.id}"><span>${esc(c.icon)}</span><span>${esc(c.name)}</span></button>`).join("")}</div></div>
+         <div class="field"><label for="tx-acc">Шот</label><select class="inp" id="tx-acc">${accOptions(t.acc)}</select></div>`}
+      <div class="frow"><div class="field"><label for="tx-date">Күні</label><input class="inp" type="date" id="tx-date" value="${esc(t.date)}" max="${shiftMonth(curMonth(), 12)}-28"></div><div class="field"><label for="tx-note">Ескертпе</label><input class="inp" id="tx-note" placeholder="Міндетті емес" value="${esc(t.n || "")}"></div></div>
+      <div class="err" id="tx-err"></div>
+      <button class="btn primary block" id="tx-save">${existing ? "Сақтау" : "Қосу"}</button>
+      ${existing ? `<button class="btn danger block" id="tx-del">Өшіру</button>` : ""}`;
+    openSheet(existing ? "Операцияны өзгерту" : "Жаңа операция", body, b => {
+      const read = () => { t.a = $("#tx-amt", b).value; t.acc = $("#tx-acc", b).value; t.date = $("#tx-date", b).value || today(); t.n = $("#tx-note", b).value.trim(); const to = $("#tx-to", b); if (to) t.to = to.value; };
+      $$("[data-ttype]", b).forEach(x => x.onclick = () => { read(); const nt = x.dataset.ttype; if (nt !== t.t) { if ((nt === "inc") !== (t.t === "inc")) t.c = null; t.t = nt; draw(); } });
+      $$("[data-cat]", b).forEach(x => x.onclick = () => { t.c = x.dataset.cat; $$("[data-cat]", b).forEach(y => y.setAttribute("aria-pressed", y === x)); });
+      if (!existing) setTimeout(() => { const i = $("#tx-amt", b); if (i && window.matchMedia("(pointer:fine)").matches) i.focus(); }, 60);
+      $("#tx-amt", b).addEventListener("keydown", e => { if (e.key === "Enter") $("#tx-save", b).click(); });
+      $("#tx-save", b).onclick = () => {
+        read(); const a = parseAmt(t.a), err = $("#tx-err", b);
+        if (!(a > 0)) { err.textContent = "Соманы енгізіңіз (0-ден үлкен)."; return; }
+        if (t.t !== "tr" && !t.c) { err.textContent = "Санатты таңдаңыз."; return; }
+        if (!t.acc) { err.textContent = "Алдымен шот қосыңыз (Тағы → Шоттар)."; return; }
+        if (t.t === "tr" && t.to === t.acc) { err.textContent = "Бір шоттан сол шотқа аударуға болмайды."; return; }
+        const rec = {id: t.id, t: t.t, a, acc: t.acc, date: t.date, n: t.n, ts: t.ts};
+        if (t.t === "tr") rec.to = t.to; else rec.c = t.c;
+        ui.lastAcc = t.acc; lsSet("qalta-lastacc", t.acc);
+        upsertTx(rec, prevKey); closeSheet(); toast(existing ? "Сақталды" : "Қосылды");
+      };
+      const del = $("#tx-del", b); if (del) del.onclick = e => armDelete(e.currentTarget, () => { removeTx(existing); closeSheet(); toast("Өшірілді"); });
+    });
+  };
+  draw();
+}
+
+/* account editor */
+function openAcc(id){
+  const a = id ? acc(id) : null;
+  openSheet(a ? "Шотты өзгерту" : "Жаңа шот", `
+    <div class="frow" style="grid-template-columns:80px 1fr"><div class="field"><label for="a-icon">Белгі</label><input class="inp" id="a-icon" maxlength="4" value="${esc(a ? a.icon : "💳")}" style="text-align:center;font-size:20px"></div><div class="field"><label for="a-name">Атауы</label><input class="inp" id="a-name" placeholder="Мысалы: Kaspi Gold" value="${esc(a ? a.name : "")}"></div></div>
+    <div class="field"><label for="a-init">Бастапқы қалдық, ₸</label><input class="inp num" id="a-init" inputmode="decimal" value="${a ? esc(a.initial) : ""}" placeholder="0"><span class="small muted">Қосымшаны бастаған кездегі шоттағы сома. Қазіргі қалдық = бастапқы + кіріс − шығын.</span></div>
+    ${a ? `<div class="field"><label for="a-now">Немесе қазіргі нақты қалдықты енгізіңіз</label><input class="inp num" id="a-now" inputmode="decimal" placeholder="${esc(Math.round(balances()[a.id]))}"><span class="small muted">Банк қосымшасындағы сомамен теңестіру үшін.</span></div>` : ""}
+    <div class="err" id="a-err"></div>
+    <button class="btn primary block" id="a-save">Сақтау</button>
+    ${a && S.settings.accounts.length > 1 ? `<button class="btn danger block" id="a-del">Шотты өшіру</button>` : ""}`, b => {
+    $("#a-save", b).onclick = () => {
+      const name = $("#a-name", b).value.trim(); if (!name) { $("#a-err", b).textContent = "Атауын жазыңыз."; return; }
+      let init = parseAmt($("#a-init", b).value || 0); if (!isFinite(init)) init = 0;
+      const nowEl = $("#a-now", b);
+      if (a && nowEl && nowEl.value.trim()) { const now = parseAmt(nowEl.value); if (isFinite(now)) init = init + (now - balances()[a.id]); }
+      if (a) Object.assign(a, {name, icon: $("#a-icon", b).value.trim() || "💳", initial: Math.round(init * 100) / 100});
+      else S.settings.accounts.push({id: uid(), name, icon: $("#a-icon", b).value.trim() || "💳", initial: init});
+      commitSettings(); closeSheet(); toast("Сақталды");
+    };
+    const d = $("#a-del", b); if (d) d.onclick = e => armDelete(e.currentTarget, () => { S.settings.accounts = S.settings.accounts.filter(x => x.id !== a.id); commitSettings(); closeSheet(); toast("Шот өшірілді"); });
+  });
+}
+
+/* goal editor */
+function openGoal(id){
+  const g = id ? goal(id) : null;
+  const icons = ["🎯","📱","💻","✈️","🚗","🏠","🎓","💍","🛡️","🎁","🏖️","🐷"];
+  openSheet(g ? "Мақсатты өзгерту" : "Жаңа мақсат", `
+    <div class="field"><span class="flabel">Белгі</span><div class="chips" id="g-icons">${icons.map(i => `<button class="chip" data-ic="${i}" aria-pressed="${(g ? g.icon : "🎯") === i}" style="font-size:18px">${i}</button>`).join("")}</div></div>
+    <div class="field"><label for="g-name">Атауы</label><input class="inp" id="g-name" placeholder="Мысалы: Жаңа ноутбук" value="${esc(g ? g.name : "")}"></div>
+    <div class="frow"><div class="field"><label for="g-target">Керек сома, ₸</label><input class="inp num" id="g-target" inputmode="decimal" value="${g ? esc(g.target) : ""}"></div><div class="field"><label for="g-dl">Мерзімі</label><input class="inp" type="date" id="g-dl" value="${esc(g ? g.deadline || "" : "")}"></div></div>
+    <div class="frow"><div class="field"><label for="g-rate">Депозит %, жылдық</label><input class="inp num" id="g-rate" inputmode="decimal" placeholder="Жоқ" value="${g && g.rate ? esc(g.rate) : ""}"></div><div class="field"><label for="g-start">Қазір жиналғаны, ₸</label><input class="inp num" id="g-start" inputmode="decimal" placeholder="0" value="${g && g.start ? esc(g.start) : ""}"></div></div>
+    <span class="small muted">Пайызды көрсетсеңіз, айлық капитализациямен есептейміз. «Қазір жиналғаны» — қосымшаға дейін жинаған сомаңыз.</span>
+    <div class="err" id="g-err"></div>
+    <button class="btn primary block" id="g-save">Сақтау</button>
+    ${g ? `<button class="btn danger block" id="g-del">Мақсатты өшіру</button>` : ""}`, b => {
+    let icon = g ? g.icon : "🎯";
+    $$("[data-ic]", b).forEach(x => x.onclick = () => { icon = x.dataset.ic; $$("[data-ic]", b).forEach(y => y.setAttribute("aria-pressed", y === x)); });
+    $("#g-save", b).onclick = () => {
+      const name = $("#g-name", b).value.trim(), target = parseAmt($("#g-target", b).value), rate = parseAmt($("#g-rate", b).value || 0), start = parseAmt($("#g-start", b).value || 0);
+      if (!name) { $("#g-err", b).textContent = "Атауын жазыңыз."; return; }
+      if (!(target > 0)) { $("#g-err", b).textContent = "Керек соманы жазыңыз."; return; }
+      const data = {name, icon, target, deadline: $("#g-dl", b).value || "", rate: isFinite(rate) && rate > 0 ? rate : 0, start: isFinite(start) ? start : 0};
+      if (g) Object.assign(g, data); else S.settings.goals.push({id: uid(), created: today(), ...data});
+      commitSettings(); closeSheet(); toast("Сақталды");
+    };
+    const d = $("#g-del", b); if (d) d.onclick = e => armDelete(e.currentTarget, () => { removeTxWhere(t => t.t === "goal" && t.g === g.id); S.settings.goals = S.settings.goals.filter(x => x.id !== g.id); commitSettings(); closeSheet(); toast("Мақсат өшірілді, ақша шоттарға қайтарылды"); });
+  });
+}
+function openGoalMove(id, dir, interest){
+  const g = goal(id); if (!g) return;
+  const title = interest ? "Пайыз түсті" : dir > 0 ? `«${g.name}» мақсатына салу` : `«${g.name}» мақсатынан алу`;
+  const c = goalCalc(g);
+  const hint = interest ? "Банк есептеген пайыз сомасын жазыңыз — ол мақсатқа қосылады." : dir > 0 ? (c.perMonth ? `Мерзімге жету үшін айына ${fmt(c.perMonth)} салу керек.` : "") : `Мақсатта ${fmt(c.s)} бар.`;
+  openSheet(title, `
+    <div class="field"><label for="m-amt">Сома, ₸</label><input class="inp big num" id="m-amt" inputmode="decimal" placeholder="0" value="${dir > 0 && !interest && c.perMonth ? Math.ceil(c.perMonth) : ""}"></div>
+    ${interest ? "" : `<div class="field"><label for="m-acc">${dir > 0 ? "Қай шоттан" : "Қай шотқа"}</label><select class="inp" id="m-acc">${accOptions(defAcc(), true, "Шотсыз (сырттан)")}</select></div>`}
+    <div class="field"><label for="m-date">Күні</label><input class="inp" type="date" id="m-date" value="${today()}"></div>
+    ${hint ? `<span class="small muted">${esc(hint)}</span>` : ""}
+    <div class="err" id="m-err"></div>
+    <button class="btn primary block" id="m-save">${dir > 0 ? "Салу" : "Алу"}</button>`, b => {
+    $("#m-save", b).onclick = () => {
+      const a = parseAmt($("#m-amt", b).value);
+      if (!(a > 0)) { $("#m-err", b).textContent = "Соманы енгізіңіз."; return; }
+      if (dir < 0 && a > c.s + 0.01) { $("#m-err", b).textContent = `Мақсатта тек ${fmt(c.s)} бар.`; return; }
+      const accEl = $("#m-acc", b);
+      upsertTx({id: uid(), t: "goal", g: g.id, gd: dir, a, acc: accEl ? accEl.value : "", date: $("#m-date", b).value || today(), n: interest ? "Депозит пайызы" : ""});
+      closeSheet(); toast(dir > 0 ? "Салынды" : "Алынды");
+    };
+  });
+}
+
+/* recurring editor */
+function openRec(id){
+  const r = id ? S.settings.recurring.find(x => x.id === id) : null;
+  let type = r ? r.type : "exp";
+  const draw = () => {
+    const cats = S.settings.cats.filter(c => c.type === type);
+    openSheet(r ? "Тұрақты төлемді өзгерту" : "Тұрақты төлем", `
+      <div class="seg">${[["exp","Шығын"],["inc","Кіріс"]].map(([v, l]) => `<button data-rt="${v}" aria-pressed="${type === v}">${l}</button>`).join("")}</div>
+      <div class="field"><label for="r-name">Атауы</label><input class="inp" id="r-name" placeholder="Мысалы: Пәтер ақысы" value="${esc(r ? r.name : "")}"></div>
+      <div class="frow"><div class="field"><label for="r-amt">Сома, ₸</label><input class="inp num" id="r-amt" inputmode="decimal" value="${r ? esc(r.a) : ""}"></div><div class="field"><label for="r-day">Айдың қай күні</label><input class="inp num" id="r-day" type="number" min="1" max="31" value="${r ? r.day : new Date().getDate()}"></div></div>
+      <div class="frow"><div class="field"><label for="r-cat">Санат</label><select class="inp" id="r-cat">${cats.map(c => `<option value="${esc(c.id)}" ${r && r.c === c.id ? "selected" : ""}>${esc(c.icon + " " + c.name)}</option>`).join("")}</select></div><div class="field"><label for="r-acc">Шот</label><select class="inp" id="r-acc">${accOptions(r ? r.acc : defAcc())}</select></div></div>
+      <div class="err" id="r-err"></div>
+      <button class="btn primary block" id="r-save">Сақтау</button>
+      ${r ? `<button class="btn danger block" id="r-del">Өшіру</button>` : ""}`, b => {
+      $$("[data-rt]", b).forEach(x => x.onclick = () => { type = x.dataset.rt; draw(); });
+      $("#r-save", b).onclick = () => {
+        const name = $("#r-name", b).value.trim(), a = parseAmt($("#r-amt", b).value), day = Math.min(31, Math.max(1, parseInt($("#r-day", b).value, 10) || 1));
+        if (!name || !(a > 0)) { $("#r-err", b).textContent = "Атауы мен сомасын толтырыңыз."; return; }
+        const data = {name, a, day, type, c: $("#r-cat", b).value, acc: $("#r-acc", b).value};
+        if (r) Object.assign(r, data); else S.settings.recurring.push({id: uid(), last: "", ...data});
+        commitSettings(); closeSheet(); toast("Сақталды");
+      };
+      const d = $("#r-del", b); if (d) d.onclick = e => armDelete(e.currentTarget, () => { S.settings.recurring = S.settings.recurring.filter(x => x.id !== r.id); commitSettings(); closeSheet(); });
+    });
+  };
+  draw();
+}
+
+/* debt editor */
+function openDebt(id){
+  const d = id ? debt(id) : null;
+  let dir = d ? d.dir : "lent";
+  const draw = () => openSheet(d ? "Қарызды өзгерту" : "Жаңа қарыз", `
+    <div class="seg">${[["lent","Мен бердім"],["borrowed","Мен алдым"]].map(([v, l]) => `<button data-dd="${v}" aria-pressed="${dir === v}" ${d ? "disabled" : ""}>${l}</button>`).join("")}</div>
+    <div class="field"><label for="d-person">Кім</label><input class="inp" id="d-person" placeholder="Аты" value="${esc(d ? d.person : "")}"></div>
+    <div class="frow"><div class="field"><label for="d-amt">Сома, ₸</label><input class="inp num" id="d-amt" inputmode="decimal" value="${d ? esc(d.amount) : ""}" ${d ? "disabled" : ""}></div><div class="field"><label for="d-due">Қайтару мерзімі</label><input class="inp" type="date" id="d-due" value="${esc(d ? d.due || "" : "")}"></div></div>
+    ${d ? "" : `<div class="field"><label for="d-acc">${dir === "lent" ? "Қай шоттан бердіңіз" : "Қай шотқа түсті"}</label><select class="inp" id="d-acc">${accOptions(defAcc(), true, "Шотқа әсер етпесін")}</select></div>`}
+    <div class="field"><label for="d-note">Ескертпе</label><input class="inp" id="d-note" value="${esc(d ? d.note || "" : "")}"></div>
+    <div class="err" id="d-err"></div>
+    <button class="btn primary block" id="d-save">Сақтау</button>
+    ${d ? `<button class="btn danger block" id="d-del">Қарызды өшіру</button>` : ""}`, b => {
+    $$("[data-dd]", b).forEach(x => x.onclick = () => { dir = x.dataset.dd; draw(); });
+    $("#d-save", b).onclick = () => {
+      const person = $("#d-person", b).value.trim(); if (!person) { $("#d-err", b).textContent = "Кім екенін жазыңыз."; return; }
+      if (d) { Object.assign(d, {person, due: $("#d-due", b).value, note: $("#d-note", b).value.trim()}); commitSettings(); closeSheet(); return; }
+      const amount = parseAmt($("#d-amt", b).value); if (!(amount > 0)) { $("#d-err", b).textContent = "Соманы жазыңыз."; return; }
+      const nd = {id: uid(), person, amount, dir, date: today(), due: $("#d-due", b).value, note: $("#d-note", b).value.trim(), closed: false};
+      S.settings.debts.push(nd); persistSettings();
+      upsertTx({id: uid(), t: "debt", d: nd.id, s: dir === "lent" ? -1 : 1, a: amount, acc: $("#d-acc", b).value, date: today(), n: nd.note});
+      closeSheet(); toast("Қарыз жазылды");
+    };
+    const del = $("#d-del", b); if (del) del.onclick = e => armDelete(e.currentTarget, () => { removeTxWhere(t => t.t === "debt" && t.d === d.id); S.settings.debts = S.settings.debts.filter(x => x.id !== d.id); commitSettings(); closeSheet(); });
+  });
+  draw();
+}
+function openRepay(id){
+  const d = debt(id); if (!d) return; const left = d.amount - debtRepaid(d);
+  openSheet(d.dir === "lent" ? `${d.person} қайтарды` : `${d.person}-ге қайтардым`, `
+    <div class="field"><label for="p-amt">Сома, ₸ (қалғаны ${fmt(left)})</label><input class="inp big num" id="p-amt" inputmode="decimal" value="${Math.round(left * 100) / 100}"></div>
+    <div class="field"><label for="p-acc">${d.dir === "lent" ? "Қай шотқа түсті" : "Қай шоттан"}</label><select class="inp" id="p-acc">${accOptions(defAcc(), true, "Шотқа әсер етпесін")}</select></div>
+    <div class="err" id="p-err"></div><button class="btn primary block" id="p-save">Сақтау</button>`, b => {
+    $("#p-save", b).onclick = () => {
+      const a = parseAmt($("#p-amt", b).value); if (!(a > 0)) { $("#p-err", b).textContent = "Соманы енгізіңіз."; return; }
+      if (a >= left - 0.01) { d.closed = true; persistSettings(); }
+      upsertTx({id: uid(), t: "debt", d: d.id, rep: true, s: d.dir === "lent" ? 1 : -1, a: Math.min(a, left), acc: $("#p-acc", b).value, date: today(), n: ""});
+      closeSheet(); toast(d.closed ? "Қарыз жабылды" : "Жазылды");
+    };
+  });
+}
+
+/* category editor */
+function openCat(id, type){
+  const c = id ? cat(id) : null; type = c ? c.type : type || "exp";
+  let group = c ? c.group || "want" : "need";
+  const used = c ? allTx().some(t => t.c === c.id) : false;
+  const draw = () => openSheet(c ? "Санатты өзгерту" : "Жаңа санат", `
+    <div class="frow" style="grid-template-columns:80px 1fr"><div class="field"><label for="c-icon">Белгі</label><input class="inp" id="c-icon" maxlength="4" value="${esc(c ? c.icon : "🏷️")}" style="text-align:center;font-size:20px"></div><div class="field"><label for="c-name">Атауы</label><input class="inp" id="c-name" value="${esc(c ? c.name : "")}"></div></div>
+    ${type === "exp" ? `<div class="field"><span class="flabel">Түрі (50/30/20 талдауы үшін)</span><div class="seg">${[["need","Қажеттілік"],["want","Қалау"]].map(([v, l]) => `<button data-cg="${v}" aria-pressed="${group === v}">${l}</button>`).join("")}</div><span class="small muted">Қажеттілік — онсыз болмайтын шығын (тамақ, пәтер, жол). Қалау — бас тартуға болатын шығын.</span></div>` : ""}
+    <div class="err" id="c-err"></div>
+    <button class="btn primary block" id="c-save">Сақтау</button>
+    ${c && !used ? `<button class="btn danger block" id="c-del">Санатты өшіру</button>` : c ? `<span class="small muted">Бұл санатта операциялар бар, сондықтан оны өшіруге болмайды.</span>` : ""}`, b => {
+    $$("[data-cg]", b).forEach(x => x.onclick = () => { group = x.dataset.cg; $$("[data-cg]", b).forEach(y => y.setAttribute("aria-pressed", y === x)); });
+    $("#c-save", b).onclick = () => {
+      const name = $("#c-name", b).value.trim(); if (!name) { $("#c-err", b).textContent = "Атауын жазыңыз."; return; }
+      const data = {name, icon: $("#c-icon", b).value.trim() || "🏷️", type}; if (type === "exp") data.group = group;
+      if (c) Object.assign(c, data); else S.settings.cats.push({id: uid(), ...data});
+      commitSettings(); closeSheet();
+    };
+    const del = $("#c-del", b); if (del) del.onclick = e => armDelete(e.currentTarget, () => { S.settings.cats = S.settings.cats.filter(x => x.id !== c.id); delete S.settings.budgets[c.id]; commitSettings(); closeSheet(); });
+  });
+  draw();
+}
+
+/* ---------- demo data ---------- */
+function demoState(){
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const r = (a, b) => Math.round((a + rnd() * (b - a)) / 10) * 10;
+  const st = defaults();
+  st.accounts = [{id: "card", name: "Kaspi Gold", icon: "💳", initial: 84000}, {id: "cash", name: "Қолма-қол", icon: "💵", initial: 95000}, {id: "dep", name: "Депозит", icon: "🏦", initial: 0}];
+  st.budgets = {cafe: 30000, taxi: 15000, fun: 20000};
+  st.goals = [{id: "g1", name: "Жаңа ноутбук", icon: "💻", target: 450000, deadline: shiftMonth(curMonth(), 5) + "-01", rate: 0, start: 90000, created: today()},
+              {id: "g2", name: "Қауіпсіздік қоры", icon: "🛡️", target: 600000, deadline: shiftMonth(curMonth(), 12) + "-01", rate: 14, start: 150000, created: today()}];
+  st.recurring = [{id: "r1", name: "Пәтер ақысы", a: 120000, day: 1, type: "exp", c: "home", acc: "card", last: ""},
+                  {id: "r2", name: "Үй интернеті", a: 6990, day: 10, type: "exp", c: "phone", acc: "card", last: ""},
+                  {id: "r3", name: "Музыка жазылымы", a: 1490, day: new Date().getDate() + 1 > 28 ? 28 : new Date().getDate() + 1, type: "exp", c: "subs", acc: "card", last: ""}];
+  st.debts = [{id: "d1", person: "Айбек", amount: 15000, dir: "lent", date: dstr(new Date(Date.now() - 12 * 864e5)), due: dstr(new Date(Date.now() - 864e5)), note: "", closed: false}];
+  const months = {}; const add = t => { t.id = uid() + Math.floor(rnd() * 1e6); t.ts = Date.now() - rnd() * 1e9; (months[mkey(t.date)] = months[mkey(t.date)] || []).push(t); };
+  const cm = curMonth(), td = new Date().getDate();
+  for (let back = 3; back >= 0; back--) {
+    const k = shiftMonth(cm, -back), last = back ? daysIn(k) : td, D = d => `${k}-${pad(d)}`;
+    add({t: "inc", a: 380000, c: "salary", acc: "card", date: D(Math.min(5, last)), n: ""});
+    if (back) { add({t: "exp", a: 120000, c: "home", acc: "card", date: D(1), n: "Пәтер ақысы"}); add({t: "exp", a: 6990, c: "phone", acc: "card", date: D(10), n: "Интернет"}); add({t: "exp", a: 1490, c: "subs", acc: "card", date: D(15), n: ""}); }
+    else { add({t: "exp", a: 120000, c: "home", acc: "card", date: D(1), n: "Пәтер ақысы"}); if (td >= 10) add({t: "exp", a: 6990, c: "phone", acc: "card", date: D(10), n: "Интернет"}); }
+    if (last >= 6) add({t: "goal", g: back % 2 ? "g1" : "g2", gd: 1, a: 40000 + back * 5000, acc: "card", date: D(6), n: ""});
+    if (last >= 20) add({t: "exp", a: r(8000, 25000), c: "clothes", acc: "card", date: D(20), n: ""});
+    for (let d = 1; d <= last; d++) {
+      if (rnd() < .55) add({t: "exp", a: r(2500, 11000), c: "food", acc: rnd() < .8 ? "card" : "cash", date: D(d), n: rnd() < .3 ? "Magnum" : ""});
+      if (rnd() < .45) add({t: "exp", a: r(1500, 6500) + (back === 0 ? 800 : 0), c: "cafe", acc: "card", date: D(d), n: rnd() < .3 ? "Кофе" : ""});
+      if (rnd() < .5) add({t: "exp", a: 200, c: "transport", acc: "card", date: D(d), n: "Автобус"});
+      if (rnd() < .18) add({t: "exp", a: r(1200, 3200), c: "taxi", acc: "card", date: D(d), n: ""});
+      if (rnd() < .07) add({t: "exp", a: r(3000, 12000), c: "fun", acc: "card", date: D(d), n: "Кино"});
+      if (rnd() < .04) add({t: "exp", a: r(2000, 9000), c: "health", acc: "card", date: D(d), n: "Дәріхана"});
+      if (rnd() < .05) add({t: "inc", a: r(500, 2500), c: "cashback", acc: "card", date: D(d), n: ""});
+    }
+    if (last >= 18 && back % 2 === 0) add({t: "inc", a: 45000, c: "side", acc: "card", date: D(18), n: "Фриланс"});
+  }
+  add({t: "debt", d: "d1", s: -1, a: 15000, acc: "cash", date: st.debts[0].date, n: ""});
+  st.recurring[0].last = cm; if (td >= 10) st.recurring[1].last = cm;
+  return {settings: st, months};
+}
+
+/* ---------- export / import / wipe ---------- */
+function doExport(){
+  const msg = $("#io-msg");
+  const data = JSON.stringify({app: "qalta", v: 1, exported: new Date().toISOString(), settings: (saved || S).settings, months: (saved || S).months}, null, 1);
+  try {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], {type: "application/json"}));
+    a.download = `qalta-${today()}.json`;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    if (msg) { msg.style.color = "var(--pos)"; msg.textContent = "Көшірме жүктелді."; }
+  } catch { if (msg) msg.textContent = "Жүктеу сәтсіз аяқталды. Қайталап көріңіз."; }
+}
+function doImport(file){
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try { d = JSON.parse(r.result); } catch { toast("Файл оқылмады: JSON емес."); return; }
+    if (!d || !d.settings || typeof d.months !== "object") { toast("Бұл Қалта көшірмесі емес."); return; }
+    openSheet("Көшірмеден қалпына келтіру", `<p style="margin:0">Файлда ${Object.values(d.months).flat().length} операция бар. Қазіргі деректер осы көшірмемен ауыстырылады.</p><button class="btn primary block" id="imp-ok">Ауыстыру</button><button class="btn ghost block" data-act="closeSheet">Бас тарту</button>`, b => {
+      $("#imp-ok", b).onclick = () => {
+        if (mode === "demo") exitDemo();
+        const oldKeys = Object.keys(S.months);
+        S.settings = normalize(d.settings); S.months = {};
+        for (const [k, v] of Object.entries(d.months)) if (/^\d{4}-\d{2}$/.test(k) && Array.isArray(v)) S.months[k] = v;
+        for (const k of oldKeys) if (!S.months[k]) { S.months[k] = []; persistMonth(k); }
+        for (const k of Object.keys(S.months)) persistMonth(k);
+        persistSettings(); bump(); closeSheet(); render(); toast("Қалпына келтірілді");
+      };
+    });
+  };
+  r.readAsText(file);
+}
+function wipe(){
+  if (mode === "demo") exitDemo();
+  const keys = Object.keys(S.months);
+  S.settings = defaults(); S.months = {};
+  for (const k of keys) { S.months[k] = []; persistMonth(k); }
+  persistSettings(); bump(); render(); toast("Барлық деректер өшірілді");
+}
+function enterDemo(){ if (mode === "demo") return; saved = {settings: S.settings, months: S.months, mode}; const d = demoState(); S.settings = d.settings; S.months = d.months; mode = "demo"; ui.sub = null; ui.tab = "home"; bump(); render(); window.scrollTo(0, 0); }
+function exitDemo(){ if (mode !== "demo" || !saved) return; S.settings = saved.settings; S.months = saved.months; mode = saved.mode; saved = null; bump(); render(); pull(); }
+
+/* ---------- events ---------- */
+const ACT = {
+  tab: el => { ui.tab = el.dataset.tab; ui.sub = null; closeSheet(); render(); window.scrollTo(0, 0); },
+  newTx: el => openTx(null, el.dataset.type),
+  editTx: el => { const t = (S.months[el.dataset.m] || []).find(x => x.id === el.dataset.id); if (t) openTx(t); },
+  closeSheet: () => closeSheet(),
+  opsMonth: el => { ui.opsMonth = shiftMonth(ui.opsMonth, +el.dataset.d); render(); },
+  anMonth: el => { ui.anMonth = shiftMonth(ui.anMonth, +el.dataset.d); render(); },
+  opsType: el => { ui.opsType = el.dataset.v; render(); },
+  editAcc: el => openAcc(el.dataset.id),
+  editGoal: el => openGoal(el.dataset.id),
+  goalMove: el => openGoalMove(el.dataset.id, +el.dataset.d),
+  goalInterest: el => openGoalMove(el.dataset.id, 1, true),
+  goSub: el => { ui.tab = "more"; ui.sub = el.dataset.sub || null; render(); window.scrollTo(0, 0); },
+  goDebts: () => { ui.tab = "more"; ui.sub = "debts"; render(); window.scrollTo(0, 0); },
+  editRec: el => openRec(el.dataset.id),
+  payRec: el => { const r = S.settings.recurring.find(x => x.id === el.dataset.id); if (!r) return; r.last = curMonth(); persistSettings(); upsertTx({id: uid(), t: r.type, a: r.a, c: r.c, acc: acc(r.acc) ? r.acc : defAcc(), date: today(), n: r.name}); toast("Жазылды"); },
+  skipRec: el => { const r = S.settings.recurring.find(x => x.id === el.dataset.id); if (!r) return; r.last = curMonth(); commitSettings(); },
+  editDebt: el => openDebt(el.dataset.id),
+  repay: el => openRepay(el.dataset.id),
+  editCat: el => openCat(el.dataset.id, el.dataset.type),
+  theme: el => { lsSet("qalta-theme", el.dataset.v); if (el.dataset.v === "system") { document.documentElement.removeAttribute("data-theme"); delete document.documentElement.dataset.qaltaTheme; } applyTheme(); render(); },
+  export: () => doExport(),
+  import: () => $("#import-file").click(),
+  wipe: el => armDelete(el, wipe),
+  demo: () => enterDemo(),
+  exitDemo: () => exitDemo(),
+  login: () => { try { localStorage.removeItem("qalta-skip-auth"); } catch {} mode = "auth"; render(); window.scrollTo(0, 0); },
+  logout: el => armDelete(el, signOut)
+};
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
+  const f = ACT[el.dataset.act]; if (f) { e.preventDefault(); f(el, e); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#sheet").hidden) closeSheet(); });
+document.addEventListener("input", e => {
+  if (e.target.id === "ops-q") { ui.opsQ = e.target.value; clearTimeout(ACT._q); ACT._q = setTimeout(() => { render(); const q = $("#ops-q"); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 250); }
+});
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "ops-cat") { ui.opsCat = t.value; render(); }
+  else if (t.dataset && t.dataset.bud) { const v = parseAmt(t.value); if (isFinite(v) && v > 0) S.settings.budgets[t.dataset.bud] = v; else delete S.settings.budgets[t.dataset.bud]; commitSettings(); }
+  else if (t.id === "import-file") { if (t.files && t.files[0]) doImport(t.files[0]); t.value = ""; }
+});
+/* tooltip */
+const tip = $("#tip");
+function showTip(el, x, y){ tip.textContent = el.getAttribute("data-tip"); tip.hidden = false; tip.style.left = Math.max(80, Math.min(window.innerWidth - 80, x)) + "px"; tip.style.top = y + "px"; }
+document.addEventListener("pointermove", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el) showTip(el, e.clientX, e.clientY); else tip.hidden = true; });
+document.addEventListener("pointerdown", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el && e.pointerType !== "mouse") showTip(el, e.clientX, e.clientY); else if (!el) tip.hidden = true; });
+window.addEventListener("scroll", () => { tip.hidden = true; }, {passive: true});
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 200); });
+
+boot();
+if ("serviceWorker" in navigator && location.protocol === "https:") window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+})();
+</script>
+</body>
+</html>
