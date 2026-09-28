@@ -9,6 +9,10 @@ create table if not exists public.qalta_docs (
   primary key (user_id, path)
 );
 
+-- Кірген қолданушыларға кесте ашық (бірақ төмендегі RLS тек өз жолдарын береді)
+grant select, insert, update, delete on public.qalta_docs to authenticated;
+revoke all on public.qalta_docs from anon;
+
 -- Әр адам тек өз деректерін көреді және өзгертеді
 alter table public.qalta_docs enable row level security;
 
