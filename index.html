@@ -870,8 +870,10 @@ function dailySVG(k, byDay){
   const bars = vals.map((v, i) => { const x = L + i * slot + (slot - bw) / 2; const h = v / max * ph; const future = isCur && i + 1 > td; return `<g data-tip="${esc((i + 1) + " " + MONTHS[+k.slice(5) - 1].toLowerCase() + ": " + fmt(v))}"><rect x="${L + i * slot}" y="${T}" width="${slot}" height="${ph}" fill="transparent"/>${h > 0 ? `<path d="${barPath(x, ty(v), bw, h, 3)}" fill="${isCur && i + 1 === td ? "var(--accent)" : "var(--s1)"}" opacity="${future ? .3 : 1}"/>` : ""}</g>`; }).join("");
   const ticks = [1, 5, 10, 15, 20, 25, n].filter((v, i, a) => a.indexOf(v) === i && !(v === 25 && n - 25 < 3 && v !== n)).map(d => `<text x="${L + (d - .5) * slot}" y="${H - 6}" text-anchor="middle" class="num">${d}</text>`).join("");
   const ay = ty(avg);
-  const avgLine = avg > 0 ? `<line x1="${L}" x2="${W - 6}" y1="${ay}" y2="${ay}" stroke="var(--text)" stroke-width="1" stroke-dasharray="4 4" opacity=".55"/><text x="${W - 8}" y="${ay - 5}" text-anchor="end" style="fill:var(--text)">орташа ${esc(fmt(avg))}/күн</text>` : "";
-  return `<svg class="chart wide" viewBox="0 0 ${W} ${H}" role="img" aria-label="Күндік шығындар">${g}${bars}${avgLine}${ticks}</svg>`;
+  // the average is labelled in a legend above the chart so it never collides with a bar
+  const avgLine = avg > 0 ? `<line x1="${L}" x2="${W - 6}" y1="${ay}" y2="${ay}" stroke="var(--text)" stroke-width="1.5" stroke-dasharray="5 4" opacity=".6"/>` : "";
+  const legend = avg > 0 ? `<div class="legend"><span><i style="width:16px;height:0;border-radius:0;border-top:2px dashed var(--text);opacity:.6;background:none"></i>орташа <b class="num" style="color:var(--text)">${esc(fmt(avg))}</b> күніне</span></div>` : "";
+  return `${legend}<svg class="chart wide" viewBox="0 0 ${W} ${H}" role="img" aria-label="Күндік шығындар">${g}${bars}${avgLine}${ticks}</svg>`;
 }
 function trendSVG(end){
   const keys = Array.from({length: 6}, (_, i) => shiftMonth(end, i - 5));
