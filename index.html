@@ -147,6 +147,7 @@ body.dragging *{-webkit-user-select:none;user-select:none}
 .bub-n{font-size:11.5px;color:var(--muted);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}
 .bub-v{font-size:12.5px;font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .bub-v.zero{color:var(--faint);font-weight:500}
+.bub-v.long{font-size:11px;letter-spacing:-.01em}
 body.dragging{cursor:grabbing}
 body.dragging .bub.target .bub-c{outline:2px dashed var(--faint);outline-offset:4px}
 body.dragging .bub.drop-ok .bub-c{outline:3px solid var(--accent);outline-offset:4px;transform:scale(1.12)}
@@ -773,12 +774,12 @@ function vHome(){
 
   const incCats = S.settings.cats.filter(c => c.type === "inc"), expCats = S.settings.cats.filter(c => c.type === "exp");
   const incBy = {}; for (const t of st.txs) if (t.t === "inc") incBy[t.c] = (incBy[t.c] || 0) + txKZT(t);
-  const bubV = (v, txt) => `<span class="bub-v num ${v ? "" : "zero"}">${txt}</span>`;
+  const bubV = (v, txt) => `<span class="bub-v num ${v ? "" : "zero"}${txt.length > 9 ? " long" : ""}">${txt}</span>`;
   const byVal = (arr, v) => arr.map((x, i) => ({x, i, v: v(x)})).sort((a, b) => (b.v - a.v) || (a.i - b.i)).map(o => o.x);
-  const incB = byVal(incCats, c => incBy[c.id] || 0).map(c => `<button class="bub inc" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(incBy[c.id], fmtK(incBy[c.id] || 0) + " ₸")}</button>`).join("") + `<button class="bub add" data-act="editCat" data-type="inc"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
+  const incB = byVal(incCats, c => incBy[c.id] || 0).map(c => `<button class="bub inc" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(incBy[c.id], fmt(incBy[c.id] || 0))}</button>`).join("") + `<button class="bub add" data-act="editCat" data-type="inc"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
   const accB = byVal(S.settings.accounts, a => toKZT(bal[a.id], a.cur)).map(a => `<button class="bub acc" data-kind="acc" data-id="${esc(a.id)}" data-drag="1" data-act="editAcc"><span class="bub-c">${esc(a.icon)}</span><span class="bub-n">${esc(a.name)}</span><span class="bub-v num ${bal[a.id] < 0 ? "neg" : ""}">${esc(fmtC(bal[a.id], a.cur))}</span></button>`).join("") + `<button class="bub add" data-act="editAcc"><span class="bub-c">+</span><span class="bub-n">Шот қосу</span></button>`;
   const expB = byVal(expCats, c => st.byCat[c.id] || 0).map(c => { const v = st.byCat[c.id] || 0, lim = S.settings.budgets[c.id]; const p = lim ? Math.min(100, v / lim * 100) : 0; const rc = lim && v > lim ? "var(--neg)" : p > 80 ? "var(--warn)" : "var(--pos)";
-    return `<button class="bub exp" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c ${lim ? "ring" : ""}" style="${lim ? `--p:${p};--rc:${rc}` : ""}">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(v, fmtK(v) + " ₸")}</button>`; }).join("") + `<button class="bub add" data-act="editCat" data-type="exp"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
+    return `<button class="bub exp" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c ${lim ? "ring" : ""}" style="${lim ? `--p:${p};--rc:${rc}` : ""}">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(v, fmt(v))}</button>`; }).join("") + `<button class="bub add" data-act="editCat" data-type="exp"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
   const accs = S.settings.accounts.map(a => `<button class="acc" data-act="editAcc" data-id="${esc(a.id)}"><span class="ic">${esc(a.icon)}</span><small>${esc(a.name)}</small><b class="num ${bal[a.id] < 0 ? "neg" : ""}">${fmtC(bal[a.id], a.cur)}</b>${a.cur && a.cur !== "KZT" ? `<small class="num">${rate(a.cur) ? "≈ " + fmt(toKZT(bal[a.id], a.cur)) : "бағам жоқ"}</small>` : ""}</button>`).join("") + `<button class="acc add" data-act="editAcc">+ Шот</button>`;
 
   const notes = [];
@@ -869,7 +870,7 @@ function dailySVG(k, byDay){
   const bars = vals.map((v, i) => { const x = L + i * slot + (slot - bw) / 2; const h = v / max * ph; const future = isCur && i + 1 > td; return `<g data-tip="${esc((i + 1) + " " + MONTHS[+k.slice(5) - 1].toLowerCase() + ": " + fmt(v))}"><rect x="${L + i * slot}" y="${T}" width="${slot}" height="${ph}" fill="transparent"/>${h > 0 ? `<path d="${barPath(x, ty(v), bw, h, 3)}" fill="${isCur && i + 1 === td ? "var(--accent)" : "var(--s1)"}" opacity="${future ? .3 : 1}"/>` : ""}</g>`; }).join("");
   const ticks = [1, 5, 10, 15, 20, 25, n].filter((v, i, a) => a.indexOf(v) === i && !(v === 25 && n - 25 < 3 && v !== n)).map(d => `<text x="${L + (d - .5) * slot}" y="${H - 6}" text-anchor="middle" class="num">${d}</text>`).join("");
   const ay = ty(avg);
-  const avgLine = avg > 0 ? `<line x1="${L}" x2="${W - 6}" y1="${ay}" y2="${ay}" stroke="var(--text)" stroke-width="1" stroke-dasharray="4 4" opacity=".55"/><text x="${W - 8}" y="${ay - 5}" text-anchor="end" style="fill:var(--text)">орташа ${esc(fmtK(avg))}/күн</text>` : "";
+  const avgLine = avg > 0 ? `<line x1="${L}" x2="${W - 6}" y1="${ay}" y2="${ay}" stroke="var(--text)" stroke-width="1" stroke-dasharray="4 4" opacity=".55"/><text x="${W - 8}" y="${ay - 5}" text-anchor="end" style="fill:var(--text)">орташа ${esc(fmt(avg))}/күн</text>` : "";
   return `<svg class="chart wide" viewBox="0 0 ${W} ${H}" role="img" aria-label="Күндік шығындар">${g}${bars}${avgLine}${ticks}</svg>`;
 }
 function trendSVG(end){
