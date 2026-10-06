@@ -59,6 +59,11 @@ body{margin:0}
 [hidden]{display:none!important}
 img{max-width:100%}
 :root{padding-top:env(safe-area-inset-top,0px)}
+/* iPhone: экраннан кең элемент бүкіл бетті кішірейтіп жібермесін */
+html,body{max-width:100%;overflow-x:clip}
+.stack>*,.grid2>*,.section>*,.list>*,.card{min-width:0}
+/* Экранға қосылған қосымшада сағат/батарея жолағының астына мазмұн кірмесін */
+body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:45;pointer-events:none}
 html,body{background:var(--bg)}
 body{color:var(--text);font:15px/1.45 var(--f-body);-webkit-font-smoothing:antialiased;min-height:100%}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -69,7 +74,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .disp{font-family:var(--f-disp);letter-spacing:-.01em}
 
 /* Layout */
-.app{display:grid;grid-template-columns:1fr;min-height:100vh}
+.app{display:grid;grid-template-columns:minmax(0,1fr);min-height:100vh}
 .side{display:none}
 .main{padding-inline:16px;padding-block:14px 120px;max-width:1080px;width:100%;margin-inline:auto;min-width:0}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
@@ -81,7 +86,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--faint);display:inline-block}
 .sync.ok i{background:var(--pos)} .sync.err i{background:var(--neg)} .sync.busy i{background:var(--warn)}
 
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
 .tab{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;color:var(--muted);font-size:11px;font-weight:500;border-radius:12px}
 .tab svg{width:22px;height:22px}
 .tab[aria-current="page"]{color:var(--accent)}
@@ -89,7 +94,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .fab svg{width:28px;height:28px}
 
 @media (min-width:900px){
-  .app{grid-template-columns:232px 1fr}
+  .app{grid-template-columns:232px minmax(0,1fr)}
   .side{display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;padding:22px 14px;border-right:1px solid var(--line);background:var(--surface)}
   .side .brand{padding:0 8px 18px}
   .side .tab{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14.5px;padding:10px 12px;color:var(--text)}
@@ -104,8 +109,8 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .card{background:var(--surface);border-radius:var(--r);padding:16px;box-shadow:var(--shadow)}
 .section{display:flex;flex-direction:column;gap:10px}
 .stack{display:flex;flex-direction:column;gap:16px}
-.grid2{display:grid;gap:16px;grid-template-columns:1fr}
-@media (min-width:900px){.grid2{grid-template-columns:1fr 1fr}.span2{grid-column:1/-1}}
+.grid2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.span2{grid-column:1/-1}}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .sec-h h2{font-size:16px;font-weight:700}
 .sec-h .link{background:none;border:0;color:var(--accent);font-weight:600;font-size:14px;padding:4px}
@@ -117,7 +122,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .hero::after{content:"";position:absolute;right:-40px;top:-50px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,255,255,.45),rgba(255,255,255,.08) 60%,transparent 70%);pointer-events:none}
 .hero .lbl{font-size:13px;opacity:.85;font-weight:500}
 .hero .big{font:700 clamp(30px,8vw,40px)/1.1 var(--f-disp);margin:4px 0 14px;letter-spacing:-.02em}
-.hero-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;position:relative;z-index:1}
+.hero-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;position:relative;z-index:1}
 .hero-row div{background:rgba(255,255,255,.14);border-radius:12px;padding:8px 10px;min-width:0}
 .hero-row small{display:block;font-size:11.5px;opacity:.85}
 .hero-row b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
@@ -178,7 +183,7 @@ body.dragging .bub.drop-ok .bub-c{outline:3px solid var(--accent);outline-offset
 
 /* Lists */
 .list{display:flex;flex-direction:column}
-.row{display:flex;align-items:center;gap:12px;padding:10px 4px;border:0;background:none;width:100%;text-align:left;border-radius:12px}
+.row{display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden;padding:10px 4px;border:0;background:none;width:100%;text-align:left;border-radius:12px}
 button.row:hover{background:var(--surface-2)}
 .row + .row{border-top:1px solid var(--line)}
 .ico{flex:0 0 40px;width:40px;height:40px;border-radius:12px;background:var(--surface-2);display:grid;place-items:center;font-size:19px}
@@ -244,8 +249,8 @@ select.inp{height:47px}
 .banner.demo{background:var(--warn-soft);color:var(--text)}
 
 /* KPIs */
-.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-@media (min-width:640px){.kpis{grid-template-columns:repeat(4,1fr)}}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (min-width:640px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .kpi{background:var(--surface);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);min-width:0}
 .kpi small{color:var(--muted);font-size:12.5px;font-weight:600;display:block}
 .kpi b{font-size:18px;display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -270,7 +275,7 @@ select.inp{height:47px}
 .tip{position:fixed;z-index:60;pointer-events:none;background:var(--text);color:var(--bg);font-size:12.5px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,calc(-100% - 10px));box-shadow:var(--shadow)}
 .split{display:flex;height:22px;border-radius:8px;overflow:hidden;gap:2px;background:var(--surface)}
 .split > div{height:100%}
-.rule-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.rule-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
 .rule-grid div{background:var(--surface-2);border-radius:12px;padding:8px 10px;min-width:0}
 .rule-grid small{display:block;font-size:11.5px;color:var(--muted)}
 .rule-grid b{font-size:15px}
@@ -1181,7 +1186,7 @@ function vGoals(){
       <div class="goal-meta">${c.rest > 0 ? `<span>Қалды: <b class="num">${F(c.rest)}</b></span>` : ""}${c.perMonth ? `<span>Айына салу керек: <b class="num">${F(c.perMonth)}</b>${gc !== "KZT" && rate(gc) ? ` (≈ ${fmt(toKZT(c.perMonth, gc))})` : ""}</span>` : ""}${c.pace > 0 ? `<span>Соңғы 3 ай орташа: <b class="num">${F(c.pace)}</b></span>` : ""}${c.yearly > 0 ? `<span>Жылына пайыз ≈ <b class="num pos">+${F(c.yearly)}</b></span>` : ""}</div>
       <div class="btns"><button class="btn primary sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="1">${I.plus} Салу</button><button class="btn sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="-1">Алу</button>${g.rate ? `<button class="btn sm ghost" data-act="goalInterest" data-id="${esc(g.id)}">Пайыз түсті</button>` : ""}<button class="btn sm ghost" data-act="editGoal" data-id="${esc(g.id)}">Өзгерту</button></div></section>`; }).join("");
   return `<div class="stack">
-    <div class="kpis" style="grid-template-columns:repeat(2,1fr)"><div class="kpi"><small>Барлық жинақ</small><b class="num">${fmt(total)}</b></div><div class="kpi"><small>Осы айда салынды</small><b class="num">${fmt(monthStats(curMonth()).sav)}</b></div></div>
+    <div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="kpi"><small>Барлық жинақ</small><b class="num">${fmt(total)}</b></div><div class="kpi"><small>Осы айда салынды</small><b class="num">${fmt(monthStats(curMonth()).sav)}</b></div></div>
     <div class="grid2">${cards}</div>
     ${gs.length ? "" : `<div class="card empty"><b>Әзірге мақсат жоқ</b>Мысалы: «Жаңа телефон — 300 000 ₸, маусымға дейін». Депозит пайызын көрсетсеңіз, айына қанша салу керегін есептейміз.</div>`}
     <button class="btn primary block" data-act="editGoal">${I.plus} Жаңа мақсат</button>
@@ -1226,7 +1231,7 @@ function vDebts(){
   const ds = S.settings.debts.slice().sort((a, b) => (a.closed - b.closed) || (a.date < b.date ? 1 : -1));
   const owedToMe = ds.filter(d => !d.closed && d.dir === "lent").reduce((s, d) => s + d.amount - debtRepaid(d), 0);
   const iOwe = ds.filter(d => !d.closed && d.dir === "borrowed").reduce((s, d) => s + d.amount - debtRepaid(d), 0);
-  return `<div class="stack">${backBar("Қарыздар")}<div class="kpis" style="grid-template-columns:repeat(2,1fr)"><div class="kpi"><small>Маған қайтаруы керек</small><b class="num pos">${fmt(owedToMe)}</b></div><div class="kpi"><small>Мен қайтаруым керек</small><b class="num neg">${fmt(iOwe)}</b></div></div>
+  return `<div class="stack">${backBar("Қарыздар")}<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="kpi"><small>Маған қайтаруы керек</small><b class="num pos">${fmt(owedToMe)}</b></div><div class="kpi"><small>Мен қайтаруым керек</small><b class="num neg">${fmt(iOwe)}</b></div></div>
   <section class="card list">${ds.map(d => { const left = d.amount - debtRepaid(d); return `<div class="row" style="flex-wrap:wrap"><span class="ico">${d.dir === "lent" ? "📤" : "📥"}</span><span class="mid"><span class="t" style="display:block">${esc(d.person)}</span><span class="s" style="display:block">${d.dir === "lent" ? "Мен бердім" : "Мен алдым"} · ${esc(d.date)}${d.due ? " · мерзімі " + esc(d.due) : ""}${d.note ? " · " + esc(d.note) : ""}</span></span><span class="amt num">${d.closed ? `<span class="pill ok">Жабылды</span>` : fmt(left)}</span>${d.closed ? "" : `<div class="btns" style="width:100%;padding-left:52px"><button class="btn sm primary" data-act="repay" data-id="${esc(d.id)}">${d.dir === "lent" ? "Қайтарды" : "Қайтардым"}</button><button class="btn sm ghost" data-act="editDebt" data-id="${esc(d.id)}">Өзгерту</button></div>`}</div>`; }).join("") || `<div class="empty">Қарыз жоқ. Жақсы!</div>`}</section><button class="btn primary" data-act="editDebt">${I.plus} Қарыз қосу</button></div>`;
 }
 function vCats(){
@@ -1487,7 +1492,7 @@ function openSplitView(id){
     ? sp.people.map((p, idx) => { const d = p.d && debt(p.d); if (!d) return ""; return `<div style="display:flex;align-items:center;gap:6px"><button class="chk" role="checkbox" aria-checked="${d.closed}" data-spchk="${esc(d.id)}">${box(d.closed)}<span class="nm">${esc(p.name)}</span><span class="num" style="font-weight:700">${fmt(p.share)}</span></button>${d.closed ? "" : `<button class="x" data-spshare="${idx}" aria-label="${esc(p.name)} үшін хабар жіберу" title="Хабар жіберу">📤</button>`}</div>`; }).join("")
     : sp.people.filter(p => p.d && debt(p.d)).map(p => { const d = debt(p.d); return `<button class="chk" role="checkbox" aria-checked="${d.closed}" data-spchk="${esc(d.id)}">${box(d.closed)}<span class="nm">${esc(p.name)}-ге қайтардым</span><span class="num" style="font-weight:700">${fmt(d.amount)}</span></button>`; }).join("");
   openSheet(sp.title, `
-    <div class="kpis" style="grid-template-columns:repeat(2,1fr)"><div class="kpi"><small>Жалпы</small><b class="num">${fmt(sp.total)}</b><em>${esc(dayLabel(sp.date))}</em></div><div class="kpi"><small>Сіздің үлесіңіз</small><b class="num">${fmt(sp.me)}</b><em>${sp.payer === "me" ? `${i.paid}/${i.count} қайтарды` : esc(sp.payerName) + " төледі"}</em></div></div>
+    <div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="kpi"><small>Жалпы</small><b class="num">${fmt(sp.total)}</b><em>${esc(dayLabel(sp.date))}</em></div><div class="kpi"><small>Сіздің үлесіңіз</small><b class="num">${fmt(sp.me)}</b><em>${sp.payer === "me" ? `${i.paid}/${i.count} қайтарды` : esc(sp.payerName) + " төледі"}</em></div></div>
     ${sp.payer === "me" ? `<div class="bar thick"><i class="ok" style="width:${i.owed ? i.back / i.owed * 100 : 100}%"></i></div><div class="small muted num">Қайтарылды ${fmt(i.back)} / ${fmt(i.owed)}</div>` : ""}
     <div class="card" style="padding:4px 10px;box-shadow:none;border:1px solid var(--line)">${rows || `<div class="empty small">Қайтаратын ешкім жоқ.</div>`}</div>
     <span class="small muted">${sp.payer === "me" ? "Адам ақшаны жібергенде ✓ басыңыз — сома шотыңызға түседі. 📤 — оған үлесін хабарлама етіп жіберу." : "Қайтарғанда ✓ басыңыз — сома шотыңыздан шегеріледі."}</span>
