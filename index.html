@@ -110,6 +110,7 @@ h1,h2,h3{margin:0;text-wrap:balance}
 .section{display:flex;flex-direction:column;gap:10px}
 .stack{display:flex;flex-direction:column;gap:16px}
 .grid2{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+.goals-grid>:last-child:nth-child(odd){grid-column:1/-1}
 @media (min-width:900px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}.span2{grid-column:1/-1}}
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .sec-h h2{font-size:16px;font-weight:700}
@@ -567,6 +568,7 @@ function accrueInterest(){
   if (!(mode === "local" || (mode === "cloud" && cloudReady))) return;
   const now = today(), cm = curMonth(); let touched = false;
   for (const g of S.settings.goals) {
+    if (accruePremium(g)) touched = true;
     if (!g.auto || !(+g.rate > 0)) continue;
     if (!g.lastInt) { g.lastInt = firstIntMonth(g); touched = true; continue; }
     let k = shiftMonth(g.lastInt, 1);
@@ -582,6 +584,25 @@ function accrueInterest(){
     }
   }
   if (touched) { bump(); persistSettings(); }
+}
+// net top-ups made into a goal during year y (interest and premiums excluded) + what the user says they put in before the app
+function yearContrib(g, y){
+  let s = g.premBase && +g.premBase.y === y ? +g.premBase.a || 0 : 0;
+  for (const t of allTx()) if (t.t === "goal" && t.g === g.id && !t.int && t.date.slice(0, 4) === String(y)) s += (t.gd || 1) * (t.ga ?? t.a);
+  return Math.max(0, s);
+}
+const premiumFor = (g, y) => Math.round(Math.min(yearContrib(g, y), +g.premCap || Infinity) * (+g.prem || 0)) / 100;
+function accruePremium(g){
+  if (!(+g.prem > 0)) return false;
+  const y0 = new Date().getFullYear();
+  if (!g.lastPrem) { g.lastPrem = y0 - 1; return true; }
+  let touched = false;
+  for (let y = +g.lastPrem + 1; y < y0 && `${y + 1}-01-${pad(Math.min(+g.payDay || 1, 28))}` <= today(); y++) {
+    const date = `${y + 1}-01-${pad(Math.min(+g.payDay || 1, 28))}`, k = mkey(date), id = `prem-${g.id}-${y}`, amt = premiumFor(g, y), list = S.months[k] || [];
+    if (amt > 0 && !list.some(t => t.id === id)) { S.months[k] = list.concat([{id, t: "goal", g: g.id, gd: 1, a: amt, ga: amt, acc: "", date, n: `Мемлекет сыйлықақысы (${y})`, int: 1, prem: 1, ts: Date.now()}]); persistMonth(k); bump(); }
+    g.lastPrem = y; touched = true;
+  }
+  return touched;
 }
 function shiftDay(date, d){ const x = new Date(date + "T00:00:00"); x.setDate(x.getDate() + d); return dstr(x); }
 
@@ -780,7 +801,7 @@ function render(){
 /* ---------- views: home ---------- */
 function txTitle(t){
   if (t.t === "tr") { const a = acc(t.acc), b = acc(t.to); return `${a ? a.name : "?"} → ${b ? b.name : "?"}`; }
-  if (t.t === "goal") { const g = goal(t.g); return (t.int ? "Пайыз: " : t.gd < 0 ? "Мақсаттан алу: " : "Жинаққа: ") + (g ? g.name : "мақсат"); }
+  if (t.t === "goal") { const g = goal(t.g); return (t.prem ? "Мемлекет сыйлықақысы: " : t.int ? "Пайыз: " : t.gd < 0 ? "Мақсаттан алу: " : "Жинаққа: ") + (g ? g.name : "мақсат"); }
   if (t.t === "debt") { const d = debt(t.d); const p = d ? d.person : "?"; if (!d) return "Қарыз"; if (d.dir === "lent") return t.rep ? `${p} қарызын қайтарды` : `${p} қарызға алды`; return t.rep ? `${p}-ге қарыз қайтардым` : `${p}-ден қарыз алдым`; }
   const c = cat(t.c); return c ? c.name : "Санатсыз";
 }
@@ -1215,10 +1236,11 @@ function vGoals(){
       <div class="goal-nums"><b class="num">${F(c.s)}</b>${g.target ? `<span class="muted num">/ ${F(g.target)} · ${Math.round(c.p)}%</span>` : g.auto && g.rate > 0 ? `<span class="small muted num">келесі пайыз ≈ <span class="pos" style="font-weight:700">+${F(Math.round(c.s * g.rate / 1200))}</span></span>` : ""}</div>${gc !== "KZT" ? `<div class="small muted num" style="margin-top:-6px">${rate(gc) ? `≈ ${fmt(toKZT(c.s, gc))} · бүгінгі бағаммен (1 ${sym(gc)} = ${nf2.format(Math.round(rate(gc) * 100) / 100)} ₸)` : "Бағам жүктелмеді — «Тағы → Валюта бағамы»"}</div>` : ""}
       ${g.target ? `<div class="bar thick"><i style="width:${c.p}%"></i></div>` : ""}
       <div class="goal-meta">${c.rest > 0 ? `<span>Қалды: <b class="num">${F(c.rest)}</b></span>` : ""}${c.perMonth ? `<span>Айына салу керек: <b class="num">${F(c.perMonth)}</b>${gc !== "KZT" && rate(gc) ? ` (≈ ${fmt(toKZT(c.perMonth, gc))})` : ""}</span>` : ""}${c.pace > 0 ? `<span>Соңғы 3 ай орташа: <b class="num">${F(c.pace)}</b></span>` : ""}${c.yearly > 0 ? `<span>Жылына пайыз ≈ <b class="num pos">+${F(c.yearly)}</b></span>` : ""}</div>
+      ${+g.prem > 0 ? (() => { const y = new Date().getFullYear(), yc = yearContrib(g, y), cap = +g.premCap || 0; return `<div class="small" style="background:var(--surface-2);border-radius:12px;padding:10px 12px">🏛️ Мемлекет сыйлықақысы ${esc(String(g.prem).replace(".", ","))}%: қаңтарда ≈ <b class="num pos">+${F(premiumFor(g, y))}</b><div class="muted num" style="margin-top:4px">Биыл салынды: ${F(yc)}${cap ? ` / ${F(cap)} шегі` : ""}${cap && yc < cap ? ` · тағы ${F(cap - yc)} салсаңыз, сыйлықақы +${F(Math.round((cap - yc) * g.prem) / 100)} өседі` : ""}</div>${cap ? `<div class="bar" style="margin-top:6px"><i style="width:${Math.min(100, yc / cap * 100)}%"></i></div>` : ""}</div>`; })() : ""}
       <div class="btns"><button class="btn primary sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="1">${I.plus} Салу</button><button class="btn sm" data-act="goalMove" data-id="${esc(g.id)}" data-d="-1">Алу</button>${g.rate && !g.auto ? `<button class="btn sm ghost" data-act="goalInterest" data-id="${esc(g.id)}">Пайыз түсті</button>` : ""}<button class="btn sm ghost" data-act="editGoal" data-id="${esc(g.id)}">Өзгерту</button></div></section>`; }).join("");
   return `<div class="stack">
     <div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="kpi"><small>Барлық жинақ</small><b class="num">${fmt(total)}</b></div><div class="kpi"><small>Осы айда салынды</small><b class="num">${fmt(monthStats(curMonth()).sav)}</b></div></div>
-    <div class="grid2">${cards}</div>
+    <div class="grid2 goals-grid">${cards}</div>
     ${gs.length ? "" : `<div class="card empty"><b>Әзірге мақсат жоқ</b>Мысалы: «Жаңа телефон — 300 000 ₸, маусымға дейін». Депозит пайызын көрсетсеңіз, айына қанша салу керегін есептейміз.</div>`}
     <button class="btn primary block" data-act="editGoal">${I.plus} Жаңа мақсат</button>
   </div>`;
@@ -1663,6 +1685,8 @@ function openGoal(id){
     <div class="frow"><div class="field"><label for="g-target">Керек сома</label><input class="inp num" id="g-target" inputmode="decimal" value="${g ? esc(g.target) : ""}"></div><div class="field"><label for="g-dl">Мерзімі</label><input class="inp" type="date" id="g-dl" value="${esc(g ? g.deadline || "" : "")}"></div></div>
     <div class="frow"><div class="field"><label for="g-rate">Депозит %, жылдық</label><input class="inp num" id="g-rate" inputmode="decimal" placeholder="Жоқ" value="${g && g.rate ? esc(g.rate) : ""}"></div><div class="field"><label for="g-start">Қазір жиналғаны</label><input class="inp num" id="g-start" inputmode="decimal" placeholder="0" value="${g && g.start ? esc(g.start) : ""}"></div></div>
     <span class="small muted">Пайызды көрсетсеңіз, айлық капитализациямен есептейміз. «Қазір жиналғаны» — қосымшаға дейін жинаған сомаңыз. Жай депозит болса (мысалы, Otbasy), «Керек сома»-ны бос қалдырыңыз.</span>
+    <div class="frow"><div class="field"><label for="g-prem">Мемлекет сыйлықақысы, %</label><input class="inp num" id="g-prem" inputmode="decimal" placeholder="Жоқ" value="${g && g.prem ? esc(g.prem) : ""}"></div><div class="field"><label for="g-pcap">Жылдық салым шегі</label><input class="inp num" id="g-pcap" inputmode="decimal" value="${g && g.premCap ? esc(g.premCap) : 865000}"></div></div>
+    <div class="field"><label for="g-pbase">Биыл қосымшаға дейін салғаным</label><input class="inp num" id="g-pbase" inputmode="decimal" placeholder="0" value="${g && g.premBase && +g.premBase.y === new Date().getFullYear() ? esc(g.premBase.a) : ""}"><span class="small muted">Otbasy (Баспана): жылына бір рет, сол жылы салған сомаңыздың 20%-ы, бірақ 200 АЕК-ке дейінгі салымға ғана (2026 жылы ≈ 865 000 ₸). Қосымша оны қаңтарда өзі қосады.</span></div>
     <label class="chk" id="g-auto-l" role="checkbox" aria-checked="${g ? !!g.auto : false}" tabindex="0" style="padding:8px 0"><span class="box">✓</span><span class="nm" style="white-space:normal">Пайыз ай сайын өзі түсіп отырсын</span></label>
     <div class="field" id="g-pd-f" ${g && g.auto ? "" : "hidden"}><label for="g-pd">Пайыз түсетін күн</label><input class="inp num" id="g-pd" inputmode="numeric" value="${g && g.payDay ? esc(g.payDay) : 1}"><span class="small muted">Сол күні депозиттегі сомаға (жылдық % ÷ 12) пайыз қосылады.</span></div>
     <div class="err" id="g-err"></div>
@@ -1676,11 +1700,15 @@ function openGoal(id){
       const name = $("#g-name", b).value.trim(), target = parseAmt($("#g-target", b).value), pr = parseAmt($("#g-rate", b).value || 0), start = parseAmt($("#g-start", b).value || 0);
       if (!name) { $("#g-err", b).textContent = "Атауын жазыңыз."; return; }
       const rateV = isFinite(pr) && pr > 0 ? pr : 0;
-      if (!(target > 0) && !rateV) { $("#g-err", b).textContent = "Керек соманы жазыңыз (депозит болса, пайызын жазыңыз)."; return; }
+      if (!(target > 0) && !rateV && !(parseAmt($("#g-prem", b).value || 0) > 0)) { $("#g-err", b).textContent = "Керек соманы жазыңыз (депозит болса, пайызын жазыңыз)."; return; }
       if (auto && !rateV) { $("#g-err", b).textContent = "Пайыз өзі түсуі үшін депозит пайызын жазыңыз."; return; }
       const pd = Math.min(28, Math.max(1, Math.round(parseAmt($("#g-pd", b).value) || 1)));
       const data = {name, icon, target: target > 0 ? target : 0, deadline: $("#g-dl", b).value || "", rate: rateV, start: isFinite(start) ? start : 0, cur: $("#g-cur", b).value || "KZT", auto: auto ? 1 : 0, payDay: pd};
       if (auto && (!g || !g.auto || +g.payDay !== pd)) data.lastInt = firstIntMonth(data);
+      const prem = parseAmt($("#g-prem", b).value || 0), pcap = parseAmt($("#g-pcap", b).value || 0), pbase = parseAmt($("#g-pbase", b).value || 0);
+      data.prem = isFinite(prem) && prem > 0 ? prem : 0; data.premCap = isFinite(pcap) && pcap > 0 ? pcap : 0;
+      data.premBase = isFinite(pbase) && pbase > 0 ? {y: new Date().getFullYear(), a: pbase} : null;
+      if (data.prem && (!g || !g.prem)) data.lastPrem = new Date().getFullYear() - 1;
       if (data.cur !== "KZT") fetchRates().then(ok => { if (ok) render(); });
       if (g) Object.assign(g, data); else S.settings.goals.push({id: uid(), created: today(), ...data});
       commitSettings(); closeSheet(); toast("Сақталды");
