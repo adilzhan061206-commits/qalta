@@ -1686,7 +1686,7 @@ function openGoal(id){
     <div class="frow"><div class="field"><label for="g-rate">Депозит %, жылдық</label><input class="inp num" id="g-rate" inputmode="decimal" placeholder="Жоқ" value="${g && g.rate ? esc(g.rate) : ""}"></div><div class="field"><label for="g-start">Қазір жиналғаны</label><input class="inp num" id="g-start" inputmode="decimal" placeholder="0" value="${g && g.start ? esc(g.start) : ""}"></div></div>
     <span class="small muted">Пайызды көрсетсеңіз, айлық капитализациямен есептейміз. «Қазір жиналғаны» — қосымшаға дейін жинаған сомаңыз. Жай депозит болса (мысалы, Otbasy), «Керек сома»-ны бос қалдырыңыз.</span>
     <div class="frow"><div class="field"><label for="g-prem">Мемлекет сыйлықақысы, %</label><input class="inp num" id="g-prem" inputmode="decimal" placeholder="Жоқ" value="${g && g.prem ? esc(g.prem) : ""}"></div><div class="field"><label for="g-pcap">Жылдық салым шегі</label><input class="inp num" id="g-pcap" inputmode="decimal" value="${g && g.premCap ? esc(g.premCap) : 865000}"></div></div>
-    <div class="field"><label for="g-pbase">Биыл қосымшаға дейін салғаным</label><input class="inp num" id="g-pbase" inputmode="decimal" placeholder="0" value="${g && g.premBase && +g.premBase.y === new Date().getFullYear() ? esc(g.premBase.a) : ""}"><span class="small muted">Otbasy (Баспана): жылына бір рет, сол жылы салған сомаңыздың 20%-ы, бірақ 200 АЕК-ке дейінгі салымға ғана (2026 жылы ≈ 865 000 ₸). Қосымша оны қаңтарда өзі қосады.</span></div>
+    <div class="field"><label for="g-pleft">Биыл шекке дейін тағы қанша салу керек</label><input class="inp num" id="g-pleft" inputmode="decimal" placeholder="Банк қосымшасындағы сома" value="${g && g.prem && g.premCap && g.premBase && +g.premBase.y === new Date().getFullYear() ? esc(Math.max(0, Math.round((g.premCap - yearContrib(g, new Date().getFullYear())) * 100) / 100)) : ""}"><span class="small muted">Otbasy қосымшасы ең жоғары сыйлықақыға дейін қанша қалғанын көрсетеді, сол соманы жазыңыз. Сыйлықақы: жылына бір рет, сол жылғы салымның 20%-ы, 200 АЕК-ке дейін (2026 жылы ≈ 865 000 ₸). Қосымша оны қаңтарда өзі қосады.</span></div>
     <label class="chk" id="g-auto-l" role="checkbox" aria-checked="${g ? !!g.auto : false}" tabindex="0" style="padding:8px 0"><span class="box">✓</span><span class="nm" style="white-space:normal">Пайыз ай сайын өзі түсіп отырсын</span></label>
     <div class="field" id="g-pd-f" ${g && g.auto ? "" : "hidden"}><label for="g-pd">Пайыз түсетін күн</label><input class="inp num" id="g-pd" inputmode="numeric" value="${g && g.payDay ? esc(g.payDay) : 1}"><span class="small muted">Сол күні депозиттегі сомаға (жылдық % ÷ 12) пайыз қосылады.</span></div>
     <div class="err" id="g-err"></div>
@@ -1705,9 +1705,10 @@ function openGoal(id){
       const pd = Math.min(28, Math.max(1, Math.round(parseAmt($("#g-pd", b).value) || 1)));
       const data = {name, icon, target: target > 0 ? target : 0, deadline: $("#g-dl", b).value || "", rate: rateV, start: isFinite(start) ? start : 0, cur: $("#g-cur", b).value || "KZT", auto: auto ? 1 : 0, payDay: pd};
       if (auto && (!g || !g.auto || +g.payDay !== pd)) data.lastInt = firstIntMonth(data);
-      const prem = parseAmt($("#g-prem", b).value || 0), pcap = parseAmt($("#g-pcap", b).value || 0), pbase = parseAmt($("#g-pbase", b).value || 0);
+      const prem = parseAmt($("#g-prem", b).value || 0), pcap = parseAmt($("#g-pcap", b).value || 0), pleft = parseAmt($("#g-pleft", b).value);
       data.prem = isFinite(prem) && prem > 0 ? prem : 0; data.premCap = isFinite(pcap) && pcap > 0 ? pcap : 0;
-      data.premBase = isFinite(pbase) && pbase > 0 ? {y: new Date().getFullYear(), a: pbase} : null;
+      const yNow = new Date().getFullYear(), inApp = g ? yearContrib({...g, premBase: null}, yNow) : 0;
+      data.premBase = data.premCap && isFinite(pleft) && pleft >= 0 && $("#g-pleft", b).value.trim() ? {y: yNow, a: Math.max(0, Math.round((data.premCap - pleft - inApp) * 100) / 100)} : (g && g.premBase && +g.premBase.y === yNow ? g.premBase : null);
       if (data.prem && (!g || !g.prem)) data.lastPrem = new Date().getFullYear() - 1;
       if (data.cur !== "KZT") fetchRates().then(ok => { if (ok) render(); });
       if (g) Object.assign(g, data); else S.settings.goals.push({id: uid(), created: today(), ...data});
