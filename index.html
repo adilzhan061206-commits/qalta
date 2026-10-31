@@ -554,7 +554,7 @@ async function pull(){
     const {data, error} = await sb.from("qalta_docs").select("path,data");
     if (error) throw error;
     if (applyRemote(data)) render();
-    flush();
+    flush(); pullInbox();
   } catch { setSync("err"); }
 }
 function commitSettings(){ bump(); persistSettings(); render(); }
@@ -671,15 +671,54 @@ async function startCloud(s){
       applyRemote(data);
     }
     cloudReady = true; render();
-    flush();
+    flush(); pullInbox();
   } catch (e) { setSync("err"); toast("Серверге қосылу мүмкін болмады. Деректер осы құрылғыда сақталып тұр."); }
+}
+/* ---------- Apple Pay inbox ---------- */
+// Payments land in qalta_inbox (via the iPhone Shortcuts "Transaction" automation → qalta_pay).
+// Each row becomes an expense with a deterministic id, then is deleted from the inbox.
+const CAT_HINTS = [[/magnum|small|galmart|anvar|арзан|toimart|interfood|metro|green|супермаркет|маркет|market|продукт/i, "food"], [/yandex|яндекс|uber|indrive|taxi|такси/i, "taxi"], [/kfc|burger|бургер|coffee|кофе|starbucks|cafe|кафе|pizza|пицца|doner|донер|salam|bro|mcdonald|hardee|tomyumbar|sushi|суши|restaurant|ресторан/i, "cafe"], [/apteka|аптека|дәріхана|europharma|biosfera|med|clinic|клиника/i, "health"], [/onay|bus|автобус|azs|азс|helios|sinooil|qazaq oil|kazmunaygas|kmg|gazprom/i, "transport"], [/beeline|kcell|activ|tele2|altel|kazakhtelecom|beeline/i, "phone"], [/netflix|spotify|apple\.com|icloud|youtube|yandex plus|kinopoisk|ivi/i, "subs"], [/zara|h&m|lc waikiki|bershka|adidas|nike|defacto|koton|mango/i, "clothes"], [/kino|cinema|кино|chaplin|kinopark|steam|playstation/i, "fun"]];
+function guessCat(merchant){
+  const m = (merchant || "").trim().toLowerCase();
+  if (m) { const prev = sortTx(allTx()).find(t => t.t === "exp" && (t.n || "").trim().toLowerCase() === m && cat(t.c)); if (prev) return prev.c; }
+  for (const [re, id] of CAT_HINTS) if (re.test(m) && cat(id)) return id;
+  return cat("other") ? "other" : (S.settings.cats.find(c => c.type === "exp") || {}).id;
+}
+function guessAcc(card){
+  const c = (card || "").trim().toLowerCase(), ap = S.settings.applePay || {};
+  if (c && ap.map && acc(ap.map[c])) return ap.map[c];
+  if (c) { const a = S.settings.accounts.find(a => { const n = a.name.toLowerCase(); return n.includes(c) || c.includes(n); }); if (a) return a.id; }
+  return acc(ap.acc) ? ap.acc : defAcc();
+}
+let inboxBusy = false;
+async function pullInbox(){
+  if (mode !== "cloud" || !cloudReady || !sb || !session || inboxBusy || !navigator.onLine) return;
+  inboxBusy = true;
+  try {
+    const {data, error} = await sb.from("qalta_inbox").select("*").order("id");
+    if (error || !data || !data.length) return;
+    const have = new Set(allTx().map(t => t.id));
+    let n = 0;
+    for (const r of data) {
+      const id = "ap-" + r.id;
+      if (have.has(id)) continue;
+      const when = new Date(r.created_at), date = dstr(when), k = mkey(date);
+      S.months[k] = (S.months[k] || []).concat([{id, t: "exp", a: +r.amount, c: guessCat(r.merchant), acc: guessAcc(r.card), date, n: (r.merchant || "").trim(), ts: when.getTime(), ap: 1}]);
+      persistMonth(k); n++;
+    }
+    if (n) { bump(); render(); toast(`Apple Pay: ${n} төлем жазылды`); }
+    // the expenses are saved in the month docs (flushed to the server), so the inbox rows can go
+    await sb.from("qalta_inbox").delete().in("id", data.map(r => r.id));
+  } catch {} finally { inboxBusy = false; }
 }
 function subscribeRealtime(){
   if (rtChannel || !sb || !session) return;
   rtChannel = sb.channel("qalta-" + session.user.id)
     .on("postgres_changes", {event: "*", schema: "public", table: "qalta_docs", filter: "user_id=eq." + session.user.id}, p => {
       if (mode === "cloud" && p.new && applyRemote([p.new])) render();
-    }).subscribe();
+    })
+    .on("postgres_changes", {event: "INSERT", schema: "public", table: "qalta_inbox", filter: "user_id=eq." + session.user.id}, () => pullInbox())
+    .subscribe();
 }
 window.addEventListener("online", () => { pull(); fetchRates().then(ok => { if (ok && mode !== "auth") render(); }); });
 window.addEventListener("offline", () => { if (mode === "cloud") setSync("offline"); });
@@ -1249,13 +1288,14 @@ function vGoals(){
 
 /* ---------- views: more ---------- */
 function vMore(){
-  if (ui.sub) return ({accounts: vAccounts, budgets: vBudgets, recurring: vRecurring, debts: vDebts, cats: vCats, settings: vSettings, tips: vTips, rates: vRates, splits: vSplits}[ui.sub] || (() => ""))();
+  if (ui.sub) return ({accounts: vAccounts, budgets: vBudgets, recurring: vRecurring, debts: vDebts, cats: vCats, settings: vSettings, applepay: vApplePay, tips: vTips, rates: vRates, splits: vSplits}[ui.sub] || (() => ""))();
   const it = (sub, ic, t, s) => `<button class="row" data-act="goSub" data-sub="${sub}"><span class="ico">${ic}</span><span class="mid"><span class="t" style="display:block">${t}</span><span class="s" style="display:block">${s}</span></span><span class="chev">${I.right}</span></button>`;
   const openD = S.settings.debts.filter(d => !d.closed).length;
   return `<div class="stack"><section class="card menu list">
     ${it("accounts", "💳", "Шоттар", S.settings.accounts.length + " шот · " + fmt(totalBalance()))}
     ${it("rates", "💱", "Валюта бағамы", usedCurs().length ? usedCurs().map(c => rate(c) ? `1 ${sym(c)} = ${nf2.format(Math.round(rate(c) * 100) / 100)} ₸` : c + ": бағам жоқ").join(" · ") : "Доллар, еуро, рубль → теңге")}
     ${it("budgets", "🎚️", "Айлық лимиттер", "Санаттарға шек қою")}
+    ${it("applepay", "📲", "Apple Pay → автоматты жазу", S.settings.applePay && S.settings.applePay.token ? "Қосулы" : "Төлеген сәтте шығын өзі жазылсын")}
     ${it("recurring", "🔔", "Тұрақты төлемдер", S.settings.recurring.length ? S.settings.recurring.length + " төлем" : "Пәтер, интернет, жазылымдар")}
     ${it("splits", "👥", "Счет бөлу", S.settings.splits.length ? S.settings.splits.filter(sp => !splitInfo(sp).done).length + " ашық счет" : "Кафеде соманы достармен бөлу")}
     ${it("debts", "🤝", "Қарыздар", openD ? openD + " ашық қарыз" : "Кімге бердім, кімнен алдым")}
@@ -1315,6 +1355,46 @@ function vRates(){
     <section class="card">${rows}</section>
     <p class="small muted" style="margin:0">Шығын мен кіріс жазылған күнгі бағаммен сақталады, сондықтан өткен айлардың талдауы бағам өзгерсе де өзгермейді. Шот қалдығы мен жинақ бүгінгі бағаммен көрсетіледі.</p>
   </div>`;
+}
+function vApplePay(){
+  const ap = S.settings.applePay || {};
+  if (mode !== "cloud") return `<div class="stack">${backBar("Apple Pay")}<section class="card section"><p style="margin:0">Бұл мүмкіндік аккаунтпен жұмыс істейді: iPhone төлемді серверге жібереді, ал қосымша оны сол жерден алады.</p><div><button class="btn primary" data-act="login">Аккаунтқа кіру</button></div></section></div>`;
+  if (!ap.token) return `<div class="stack">${backBar("Apple Pay")}<section class="card section"><h2 style="font-size:16px">Төлеген сәтте шығын өзі жазылсын</h2><p class="small" style="margin:0">iPhone-дағы «Команды» қосымшасында «Транзакция» автоматтандыруы бар. Apple Pay-мен төлегенде ол соманы, дүкен атын және картаны Қалтаға жібереді. Қосымшаны ашқанда төлем шығын болып тұрады. Санатты дүкен атына қарап өзі таңдайды, кейін өзгертсеңіз, келесі жолы есте сақтайды.</p><p class="small muted" style="margin:0">Керек: iOS 17 не жаңасы. Бір рет баптайсыз, шамамен 3 минут.</p><div class="err" id="ap-err"></div><div><button class="btn primary" data-act="apOn">Қосу</button></div></section></div>`;
+  const url = (CFG.supabaseUrl || "").replace(/\/$/, "") + "/rest/v1/rpc/qalta_pay";
+  const copy = (label, v) => `<div class="field"><span class="flabel">${label}</span><div style="display:flex;gap:8px;align-items:center"><code class="inp num" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-size:12.5px">${esc(v)}</code><button class="btn sm" data-act="apCopy" data-v="${esc(v)}">Көшіру</button></div></div>`;
+  const steps = [
+    "iPhone-да <b>Команды</b> қосымшасын ашып, төмендегі <b>Автоматизация</b> → <b>+</b> басыңыз.",
+    "<b>Транзакция</b> таңдаңыз. Карталарды белгілеңіз (Kaspi Gold т.б.), «Когда я касаюсь» қалсын. <b>Запускать сразу</b> таңдап, <b>Далее</b> → <b>Новая пустая автоматизация</b>.",
+    "<b>Получить содержимое URL</b> әрекетін қосып, URL орнына төмендегі сілтемені қойыңыз.",
+    "Әрекетті ашыңыз (>): <b>Метод</b> → POST. <b>Заголовки</b> → «Добавить новый заголовок»: аты <code>apikey</code>, мәні төмендегі кілт.",
+    "<b>Тело запроса</b> → JSON. 4 өріс қосыңыз (бәрі «Текст»): <code>token</code> → төмендегі жеке кілтіңіз; <code>amount</code> → «Ввод команды» айнымалысын басып, <b>Сумма</b> таңдаңыз; <code>merchant</code> → <b>Продавец</b>; <code>card</code> → <b>Карта или пропуск</b>.",
+    "<b>Готово</b>. Тексеру үшін төмендегі «Тест төлем» батырмасын басыңыз, не Apple Pay-мен бір нәрсе сатып алыңыз."
+  ].map((t, i) => `<li style="margin-bottom:8px">${t}</li>`).join("");
+  return `<div class="stack">${backBar("Apple Pay")}
+    <section class="card section"><div class="sec-h"><h2>Баптау</h2><span class="pill ok">Қосулы</span></div><ol class="small" style="margin:0;padding-left:20px">${steps}</ol></section>
+    <section class="card section">${copy("URL", url)}${copy("apikey (заголовок)", CFG.supabaseAnonKey || "")}${copy("token (жеке кілтіңіз — ешкімге бермеңіз)", ap.token)}</section>
+    <section class="card section"><div class="field"><label for="ap-acc">Карта атауы шотқа сәйкес келмесе, қай шотқа жазу</label><select class="inp" id="ap-acc">${accOptions(ap.acc || defAcc())}</select><span class="small muted">Wallet-тағы карта аты шот атымен бірдей болса (мысалы, Kaspi Gold), сол шотқа өзі жазылады.</span></div></section>
+    <section class="card section"><div class="btns"><button class="btn" data-act="apTest">Тест төлем (1 ₸) жіберу</button><button class="btn danger" data-act="apOff">Өшіру</button></div><span class="small muted" id="ap-msg">Тест сәтті болса, бірнеше секундта операцияларда «Тест · 1 ₸» пайда болады. Оны кейін өшіре саласыз.</span></section>
+  </div>`;
+}
+async function apOn(){
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(18)), b => b.toString(16).padStart(2, "0")).join("");
+  const {error} = await sb.from("qalta_tokens").insert({token});
+  if (error) { const e = $("#ap-err"); if (e) e.textContent = /qalta_tokens|relation|schema cache/i.test(error.message || "") ? "Серверде Apple Pay кестелері әлі жоқ: supabase.sql файлының жаңа бөлімін Supabase → SQL Editor-да іске қосыңыз." : "Қосылмады: " + (error.message || "белгісіз қате"); return; }
+  S.settings.applePay = {...(S.settings.applePay || {}), token}; commitSettings();
+}
+async function apOff(){
+  const ap = S.settings.applePay || {};
+  if (ap.token && sb) { try { await sb.from("qalta_tokens").delete().eq("token", ap.token); } catch {} }
+  S.settings.applePay = {...ap, token: ""}; commitSettings(); toast("Apple Pay өшірілді. «Команды» ішіндегі автоматтандыруды да өшіріңіз.");
+}
+async function apTest(){
+  const ap = S.settings.applePay || {}, msg = $("#ap-msg");
+  try {
+    const r = await fetch((CFG.supabaseUrl || "").replace(/\/$/, "") + "/rest/v1/rpc/qalta_pay", {method: "POST", headers: {"apikey": CFG.supabaseAnonKey, "Content-Type": "application/json"}, body: JSON.stringify({token: ap.token, amount: "1 ₸", merchant: "Тест", card: ""})});
+    if (!r.ok) throw new Error((await r.text()).slice(0, 160));
+    if (msg) msg.textContent = "Жіберілді. Бірнеше секундта операцияларда пайда болады."; setTimeout(pullInbox, 1500);
+  } catch (e) { if (msg) msg.textContent = /qalta_pay|schema cache|404/i.test(String(e.message)) ? "Серверде qalta_pay функциясы жоқ: supabase.sql жаңа бөлімін іске қосыңыз." : "Қате: " + e.message; }
 }
 function vSettings(){
   const p = themePref();
@@ -1979,6 +2059,10 @@ const ACT = {
   import: () => $("#import-file").click(),
   wipe: el => armDelete(el, wipe),
   demo: () => enterDemo(),
+  apOn: () => apOn(),
+  apOff: () => apOff(),
+  apTest: () => apTest(),
+  apCopy: async el => { try { await navigator.clipboard.writeText(el.dataset.v); toast("Көшірілді"); } catch { toast(el.dataset.v); } },
   exitDemo: () => exitDemo(),
   refreshRates: async el => { el.disabled = true; el.textContent = "Жүктелуде…"; const ok = await fetchRates(true); toast(ok ? "Бағам жаңартылды" : "Бағамды жүктеу мүмкін болмады. Интернетті тексеріңіз."); render(); },
   login: () => { try { localStorage.removeItem("qalta-skip-auth"); } catch {} mode = "auth"; render(); window.scrollTo(0, 0); },
@@ -1995,6 +2079,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   const t = e.target;
   if (t.id === "ops-cat") { ui.opsCat = t.value; render(); }
+  else if (t.id === "ap-acc") { S.settings.applePay = {...(S.settings.applePay || {}), acc: t.value}; commitSettings(); }
   else if (t.dataset && t.dataset.work) { const v = parseAmt(t.value); if (isFinite(v) && v > 0) S.settings.work[t.dataset.work] = v; else delete S.settings.work[t.dataset.work]; commitSettings(); }
   else if (t.dataset && t.dataset.rate) { const v = parseAmt(t.value); if (isFinite(v) && v > 0) S.settings.rates[t.dataset.rate] = v; else delete S.settings.rates[t.dataset.rate]; commitSettings(); }
   else if (t.dataset && t.dataset.bud) { const v = parseAmt(t.value); if (isFinite(v) && v > 0) S.settings.budgets[t.dataset.bud] = v; else delete S.settings.budgets[t.dataset.bud]; commitSettings(); }
