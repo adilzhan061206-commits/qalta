@@ -464,3 +464,14 @@ body.dragging .drag-ghost:not(.drop):not(.gone){transition:none}
 .drop-dock .bub{transition:transform .18s cubic-bezier(.32,.72,0,1),outline-color .18s}
 body.dragging .drop-dock .drop-ok{transform:scale(1.07)}
 @media (prefers-reduced-motion:reduce){.drop-dock,.drop-dock.out,.dock-scrim,.drag-ghost i{animation:none}.drag-ghost{transition:none}}
+
+/* iOS 26 lens: position and size come from JS springs; held = clear glass that pops out of the bar */
+@media (max-width:899px){
+  .tab-lens{transform:none!important;translate:0 0;scale:1;transition:background-color .25s ease,box-shadow .25s ease!important}
+  .tab-lens.held{background:color-mix(in srgb,var(--surface) 30%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.8),inset 0 -1px 2px rgba(0,0,0,.06),0 6px 22px rgba(13,15,20,.18);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .tab-lens.held::before{opacity:.5}
+  .tab svg,.tab span{transition:transform .35s cubic-bezier(.32,.72,0,1),opacity .2s}
+  .tab.aim{opacity:1}
+  .tab.aim svg{transform:scale(1.1)}
+  .tab.pressed svg,.tab.pressed span{transform:none}
+}
