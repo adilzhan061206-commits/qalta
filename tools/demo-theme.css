@@ -426,3 +426,12 @@ html{touch-action:manipulation}
   .tab.aim{opacity:1}
   .tab.aim svg{transform:scale(1.12)}
 }
+
+@media (max-width:899px){
+  /* one smooth move straight to the tab: no overshoot, no swelling */
+  .tab-lens{transition:transform .26s cubic-bezier(.2,.8,.2,1);scale:1}
+  .tab-lens.moving,.tab-lens.held{scale:1}
+  .tab-lens.moving::before{opacity:.45}
+  .tab.pressed svg,.tab.pressed span{transform:scale(.92)}
+  .tab.aim svg{transform:none}
+}

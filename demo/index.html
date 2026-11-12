@@ -791,6 +791,15 @@ html{touch-action:manipulation}
   .tab.aim{opacity:1}
   .tab.aim svg{transform:scale(1.12)}
 }
+
+@media (max-width:899px){
+  /* one smooth move straight to the tab: no overshoot, no swelling */
+  .tab-lens{transition:transform .26s cubic-bezier(.2,.8,.2,1);scale:1}
+  .tab-lens.moving,.tab-lens.held{scale:1}
+  .tab-lens.moving::before{opacity:.45}
+  .tab.pressed svg,.tab.pressed span{transform:scale(.92)}
+  .tab.aim svg{transform:none}
+}
 </style>
 </head>
 <body>
@@ -1399,7 +1408,7 @@ function moveLens(){
   const {x, w} = lensBox(tab), first = lensAt === null, moved = !first && lensAt !== ui.tab;
   placeLens(x, w, !first);
   const lens = $("#tabbar .tab-lens");
-  if (moved && lens && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) { lens.classList.remove("moving"); void lens.offsetWidth; lens.classList.add("moving"); clearTimeout(moveLens.t); moveLens.t = setTimeout(() => lens.classList.remove("moving"), 300); }
+  if (moved && lens && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) { lens.classList.add("moving"); clearTimeout(moveLens.t); moveLens.t = setTimeout(() => lens.classList.remove("moving"), 260); }
   lensAt = ui.tab;
 }
 addEventListener("resize", () => { lensAt = null; moveLens(); });
@@ -1415,15 +1424,13 @@ document.addEventListener("pointermove", e => {
   if (!lensDrag || e.pointerId !== lensDrag.pid) return;
   const dx = Math.abs(e.clientX - lensDrag.x0), dy = Math.abs(e.clientY - lensDrag.y0);
   if (!lensDrag.on && (dx < 16 || dx < dy * 1.5)) return;   // a tap with a wobbly finger stays a tap
-  unpress(); const aim = nearestTab(e.clientX); if (aim) aim.t.classList.add("aim");
-  const bar = $("#tabbar"), lens = $("#tabbar .tab-lens"), cur = $("#tabbar .tab[aria-current]"); if (!bar || !lens || !cur) return;
-  lensDrag.on = true; lens.classList.add("moving", "held");
-  const r = bar.getBoundingClientRect(), w = cur.offsetWidth;
-  placeLens(Math.max(4, Math.min(r.width - w - 4, e.clientX - r.left - w / 2)), w, false);
+  lensDrag.on = true; unpress();
+  const aim = nearestTab(e.clientX); if (!aim || aim.t === lensDrag.aim) return;
+  lensDrag.aim = aim.t; aim.t.classList.add("aim");
+  placeLens(aim.t.offsetLeft, aim.t.offsetWidth, true);   // snap to the tab under the finger
 });
 document.addEventListener("pointerup", e => {
   const d = lensDrag; lensDrag = null; unpress(); if (!d || !d.on) return;
-  const lens = $("#tabbar .tab-lens"); if (lens) lens.classList.remove("moving", "held");
   const hit = nearestTab(e.clientX);
   suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
   if (hit && hit.t.dataset.tab !== ui.tab) goTab(hit.t.dataset.tab); else moveLens();
