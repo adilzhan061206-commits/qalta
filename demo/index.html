@@ -811,6 +811,24 @@ html{touch-action:manipulation}
 .dock-scrim{position:fixed;inset:0;z-index:78;background:rgba(13,15,20,.28);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);pointer-events:none;animation:scIn .15s ease-out}
 @keyframes scIn{from{opacity:0}to{opacity:1}}
 body.dragging .bub.dragging{opacity:.5}
+
+/* drag motion: one easing for everything, nothing jumps */
+.drag-ghost{left:0!important;top:0!important;width:0;height:0;border:0;background:none;box-shadow:none;transform:none;display:block;will-change:transform;transition:transform .24s cubic-bezier(.32,.72,0,1)}
+body.dragging .drag-ghost:not(.drop):not(.gone){transition:none}
+.drag-ghost i{position:absolute;left:-30px;top:-44px;width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:26px;background:var(--surface);border:3px solid var(--text);box-shadow:0 14px 34px rgba(13,15,20,.32);animation:ghIn .22s cubic-bezier(.32,.72,0,1) both;transition:transform .24s cubic-bezier(.32,.72,0,1),opacity .24s}
+@keyframes ghIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.drag-ghost.drop i{transform:scale(.35);opacity:0;top:-30px}
+.drag-ghost.gone i{transform:scale(.6);opacity:0}
+.drop-dock{animation:dkUp .42s cubic-bezier(.32,.72,0,1) both;will-change:transform}
+@keyframes dkUp{from{transform:translateY(100%)}to{transform:none}}
+.drop-dock.out{animation:dkDown .26s cubic-bezier(.32,.72,0,1) both;pointer-events:none}
+@keyframes dkDown{from{transform:none}to{transform:translateY(100%)}}
+.dock-scrim{animation:scIn .3s ease-out both}
+.dock-scrim.out{animation:scOut .26s ease-out both}
+@keyframes scOut{from{opacity:1}to{opacity:0}}
+.drop-dock .bub{transition:transform .18s cubic-bezier(.32,.72,0,1),outline-color .18s}
+body.dragging .drop-dock .drop-ok{transform:scale(1.07)}
+@media (prefers-reduced-motion:reduce){.drop-dock,.drop-dock.out,.dock-scrim,.drag-ghost i{animation:none}.drag-ghost{transition:none}}
 </style>
 </head>
 <body>
@@ -2669,7 +2687,7 @@ let drag = null, suppressClick = false;
 
 /* while a card / income is dragged (UI2), a panel of targets slides up near the finger */
 function showDock(kind, fromId){
-  hideDock();
+  document.querySelectorAll(".drop-dock, .dock-scrim").forEach(x => x.remove());
   const cats = S.settings.cats.filter(c => c.type === "exp"), accs = S.settings.accounts.filter(a => a.id !== fromId);
   const accChip = a => { const sk = skinOf(a); return `<div class="bub acc dk-acc" data-kind="acc" data-id="${esc(a.id)}" style="--cbg:${sk.bg};--cfg:${sk.fg}"><span class="bub-c">${esc(a.icon || "💳")}</span><span>${esc(a.name)}</span></div>`; };
   let html;
@@ -2678,7 +2696,12 @@ function showDock(kind, fromId){
   const sc = document.createElement("div"); sc.className = "dock-scrim"; document.body.appendChild(sc);   // dims the page: the panel is where to drop
   const d = document.createElement("div"); d.className = "drop-dock"; d.innerHTML = html; document.body.appendChild(d);
 }
-function hideDock(){ document.querySelectorAll(".drop-dock, .dock-scrim").forEach(x => x.remove()); }
+function hideDock(){
+  document.querySelectorAll(".drop-dock, .dock-scrim").forEach(x => {
+    if (x.classList.contains("out")) return;
+    x.classList.add("out"); x.addEventListener("animationend", () => x.remove(), {once: true}); setTimeout(() => x.remove(), 400);
+  });
+}
 function dropTargets(kind){ return kind === "inc" ? ".bub.acc[data-kind]" : kind === "acc" ? ".bub.acc[data-kind], .bub.exp" : null; }
 document.addEventListener("pointerdown", e => {
   const b = e.target.closest && e.target.closest(".bub[data-drag]");
@@ -2692,14 +2715,14 @@ document.addEventListener("pointermove", e => {
   if (!drag.started) {
     if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 8) return;
     drag.started = true;
-    const g = document.createElement("div"); g.className = "drag-ghost"; g.textContent = drag.el.querySelector(".bub-c").textContent; document.body.appendChild(g); drag.ghost = g;
+    const g = document.createElement("div"); g.className = "drag-ghost"; g.innerHTML = `<i>${esc(drag.el.querySelector(".bub-c").textContent)}</i>`; document.body.appendChild(g); drag.ghost = g;
     drag.el.classList.add("dragging"); document.body.classList.add("dragging");
     if (UI2) showDock(drag.kind, drag.id);
     const dock = document.querySelector(".drop-dock");
     $$(dropTargets(drag.kind)).forEach(t => { if (t !== drag.el && (!dock || dock.contains(t))) t.classList.add("target"); });
   }
   e.preventDefault();
-  drag.ghost.style.left = e.clientX + "px"; drag.ghost.style.top = e.clientY + "px";
+  drag.ghost.style.transform = `translate3d(${e.clientX}px,${e.clientY}px,0)`;
   const over = document.elementFromPoint(e.clientX, e.clientY);
   const t = over && over.closest(".bub.target");
   if (t !== drag.target) { if (drag.target) drag.target.classList.remove("drop-ok"); drag.target = t; if (t) t.classList.add("drop-ok"); }
@@ -2709,7 +2732,10 @@ document.addEventListener("pointermove", e => {
 function endDrag(apply){
   const d = drag; drag = null; if (!d || !d.started) return;
   suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
-  d.ghost.remove(); d.el.classList.remove("dragging"); document.body.classList.remove("dragging"); hideDock();
+  const g = d.ghost, hit = apply && d.target;
+  if (hit) { const r = d.target.getBoundingClientRect(); g.style.transform = `translate3d(${r.left + r.width / 2}px,${r.top + r.height / 2}px,0)`; }
+  g.classList.add(hit ? "drop" : "gone"); setTimeout(() => g.remove(), 260);
+  d.el.classList.remove("dragging"); document.body.classList.remove("dragging"); hideDock();
   $$(".bub.target").forEach(t => t.classList.remove("target", "drop-ok"));
   if (!apply || !d.target) return;
   const to = d.target.dataset.id, tk = d.target.dataset.kind;

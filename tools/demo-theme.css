@@ -446,3 +446,21 @@ html{touch-action:manipulation}
 .dock-scrim{position:fixed;inset:0;z-index:78;background:rgba(13,15,20,.28);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);pointer-events:none;animation:scIn .15s ease-out}
 @keyframes scIn{from{opacity:0}to{opacity:1}}
 body.dragging .bub.dragging{opacity:.5}
+
+/* drag motion: one easing for everything, nothing jumps */
+.drag-ghost{left:0!important;top:0!important;width:0;height:0;border:0;background:none;box-shadow:none;transform:none;display:block;will-change:transform;transition:transform .24s cubic-bezier(.32,.72,0,1)}
+body.dragging .drag-ghost:not(.drop):not(.gone){transition:none}
+.drag-ghost i{position:absolute;left:-30px;top:-44px;width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:26px;background:var(--surface);border:3px solid var(--text);box-shadow:0 14px 34px rgba(13,15,20,.32);animation:ghIn .22s cubic-bezier(.32,.72,0,1) both;transition:transform .24s cubic-bezier(.32,.72,0,1),opacity .24s}
+@keyframes ghIn{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.drag-ghost.drop i{transform:scale(.35);opacity:0;top:-30px}
+.drag-ghost.gone i{transform:scale(.6);opacity:0}
+.drop-dock{animation:dkUp .42s cubic-bezier(.32,.72,0,1) both;will-change:transform}
+@keyframes dkUp{from{transform:translateY(100%)}to{transform:none}}
+.drop-dock.out{animation:dkDown .26s cubic-bezier(.32,.72,0,1) both;pointer-events:none}
+@keyframes dkDown{from{transform:none}to{transform:translateY(100%)}}
+.dock-scrim{animation:scIn .3s ease-out both}
+.dock-scrim.out{animation:scOut .26s ease-out both}
+@keyframes scOut{from{opacity:1}to{opacity:0}}
+.drop-dock .bub{transition:transform .18s cubic-bezier(.32,.72,0,1),outline-color .18s}
+body.dragging .drop-dock .drop-ok{transform:scale(1.07)}
+@media (prefers-reduced-motion:reduce){.drop-dock,.drop-dock.out,.dock-scrim,.drag-ghost i{animation:none}.drag-ghost{transition:none}}
