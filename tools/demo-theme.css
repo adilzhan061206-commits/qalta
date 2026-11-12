@@ -1,0 +1,130 @@
+/* ===== Қалта v2 — design demo (inspired by calm "wallet card" finance apps) =====
+   Layout: light grey ground, white rounded cards, a navy stacked-card hero, blue goal cards,
+   ink-black selected states, floating glass tab bar. */
+:root{
+  --bg:#F2F3F7; --surface:#FFFFFF; --surface-2:#EEF0F4; --line:#E4E7EE;
+  --text:#0F1729; --muted:#687085; --faint:#A1A8B7;
+  --accent:#0E8A6A; --accent-2:#0A6F55; --accent-soft:#E1F3EC; --on-accent:#FFFFFF;
+  --ink:#141A2E; --on-ink:#FFFFFF;
+  --hero-1:#323C5C; --hero-2:#1A2036; --goal-1:#2A6597; --goal-2:#1A456E;
+  --pos:#12905E; --neg:#E5484D; --warn:#B7700A; --warn-soft:#FFF3DC;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 10px 28px rgba(16,24,40,.06);
+  --r:22px;
+  --f-body:-apple-system,"SF Pro Text",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-disp:-apple-system,"SF Pro Display",system-ui,"Segoe UI",Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0A0E18; --surface:#141A28; --surface-2:#1C2435; --line:#252E44;
+  --text:#EDF0F6; --muted:#949CB0; --faint:#5F687E;
+  --accent:#2BC594; --accent-2:#1FA67C; --accent-soft:#12302A; --on-accent:#05241B;
+  --ink:#EDF0F6; --on-ink:#0F1729;
+  --hero-1:#2B3554; --hero-2:#161C30; --goal-1:#245A88; --goal-2:#163B60;
+  --pos:#3DD598; --neg:#FF6B70; --warn:#F2B441; --warn-soft:#3A2D12;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#0A0E18; --surface:#141A28; --surface-2:#1C2435; --line:#252E44;
+  --text:#EDF0F6; --muted:#949CB0; --faint:#5F687E;
+  --accent:#2BC594; --accent-2:#1FA67C; --accent-soft:#12302A; --on-accent:#05241B;
+  --ink:#EDF0F6; --on-ink:#0F1729;
+  --hero-1:#2B3554; --hero-2:#161C30; --goal-1:#245A88; --goal-2:#163B60;
+  --pos:#3DD598; --neg:#FF6B70; --warn:#F2B441; --warn-soft:#3A2D12;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.3);
+}
+body{font:15px/1.45 var(--f-body);letter-spacing:-.005em}
+.disp,.page-title,.brand b{font-family:var(--f-disp);letter-spacing:-.025em}
+
+/* demo ribbon */
+.demo-ribbon{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--ink);color:var(--on-ink);border-radius:14px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+.demo-ribbon a{color:inherit;font-weight:700;text-decoration:none;white-space:nowrap}
+
+/* top bar: big iOS-style title */
+.topbar{margin-bottom:16px}
+.brand b{font-size:28px;font-weight:800}
+.logo{width:36px;height:36px;border-radius:11px;background:linear-gradient(160deg,#20B48C,#0B7A5E);box-shadow:0 4px 12px rgba(14,138,106,.3);font-family:var(--f-disp)}
+.sync{background:var(--surface);border-radius:99px;padding:6px 11px;box-shadow:var(--shadow)}
+
+/* cards */
+.card{border-radius:var(--r);padding:18px;box-shadow:var(--shadow);border:0}
+.sec-h h2{font-size:17px;font-weight:700;letter-spacing:-.015em}
+.sec-h .link{color:var(--accent)}
+.stack{gap:18px}
+
+/* hero: navy card with two cards "stacked" behind it */
+.hero{margin-top:16px;border-radius:26px;padding:22px 20px 18px;background:linear-gradient(165deg,var(--hero-1) 0%,var(--hero-2) 100%);
+  box-shadow:0 -9px 0 -4px color-mix(in srgb,var(--hero-1) 70%,#8090b8),0 -17px 0 -9px color-mix(in srgb,var(--hero-1) 45%,#aab4d4),0 18px 40px rgba(20,26,46,.28)}
+.hero::after{content:"•••• ···· ••••";background:none;width:auto;height:auto;top:20px;right:20px;border-radius:0;color:rgba(255,255,255,.3);letter-spacing:.18em;font-size:12px}
+.hero .lbl{font-size:13px;opacity:.7}
+.hero .big{font:800 clamp(34px,9vw,44px)/1.05 var(--f-disp);letter-spacing:-.035em;margin:6px 0 16px}
+.hero-row div{background:rgba(255,255,255,.08);border-radius:14px;padding:9px 11px}
+.hero-row small{opacity:.65}
+.hero-day{opacity:.9}
+
+/* segmented control: grey track, ink pill */
+.seg{background:var(--surface-2);border-radius:999px;padding:4px}
+.seg button{border-radius:999px;padding:8px 12px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);box-shadow:none}
+
+/* buttons, inputs, chips */
+.btn{border-radius:999px;padding:11px 18px}
+.btn.sm{border-radius:999px}
+.btn.primary{background:var(--accent);color:var(--on-accent)}
+.btn.ghost{border-color:var(--line);background:var(--surface)}
+.inp{border-radius:14px;background:var(--surface-2)}
+.inp.big{font:800 32px var(--f-disp);letter-spacing:-.03em}
+.chip{border-radius:999px;border-color:var(--line)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.pill{border-radius:999px;padding:4px 10px}
+.pill.ok{background:color-mix(in srgb,var(--pos) 14%,var(--surface));color:var(--pos)}
+
+/* bubbles */
+.bub-c{width:54px;height:54px;box-shadow:0 1px 2px rgba(16,24,40,.05),0 4px 14px rgba(16,24,40,.07)}
+.bub.acc .bub-c{background:color-mix(in srgb,var(--accent) 13%,var(--surface))}
+.bub.inc .bub-c{background:color-mix(in srgb,var(--pos) 12%,var(--surface))}
+.bub-v{font-weight:700;letter-spacing:-.01em}
+
+/* lists */
+.row{border-radius:14px}
+.ico{border-radius:13px}
+.row .amt{letter-spacing:-.01em}
+.bar{height:7px;background:var(--surface-2)}
+.kpi{border-radius:20px;padding:14px 16px}
+.kpi b{font-family:var(--f-disp);font-weight:800;letter-spacing:-.03em;font-size:20px}
+
+/* goals: blue cards, like a saved-up wallet card */
+.card.goal{background:linear-gradient(165deg,var(--goal-1) 0%,var(--goal-2) 100%);color:#fff;box-shadow:0 14px 34px rgba(26,69,110,.28)}
+.card.goal .muted,.card.goal .small.muted,.card.goal .goal-meta{color:rgba(255,255,255,.72)}
+.card.goal .goal-meta b{color:#fff}
+.card.goal .num.pos,.card.goal .pos{color:#9EF0CC}
+.card.goal .ico{background:rgba(255,255,255,.14)}
+.card.goal .goal-nums b{font:800 30px var(--f-disp);letter-spacing:-.035em}
+.card.goal .bar{background:rgba(255,255,255,.2)}
+.card.goal .bar i{background:#fff}
+.card.goal .pill{background:rgba(255,255,255,.16);color:#fff}
+.card.goal .btn{background:rgba(255,255,255,.14);color:#fff;border:0}
+.card.goal .btn.primary{background:#fff;color:var(--goal-2)}
+.card.goal [style*="surface-2"]{background:rgba(255,255,255,.1)!important}
+
+/* floating glass tab bar */
+.tabbar{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border-radius:32px;padding:6px;border:1px solid color-mix(in srgb,var(--line) 70%,transparent);
+  background:color-mix(in srgb,var(--surface) 78%,transparent);box-shadow:0 10px 30px rgba(16,24,40,.14)}
+.tab{border-radius:26px;padding:7px 2px}
+.tab[aria-current="page"]{color:var(--accent);background:color-mix(in srgb,var(--text) 6%,transparent)}
+.fab{bottom:calc(92px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--on-ink);box-shadow:0 10px 26px rgba(20,26,46,.32)}
+.main{padding-block:14px 140px}
+
+/* desktop side nav */
+@media (min-width:900px){
+  .side{background:var(--surface);border-right:0;box-shadow:var(--shadow)}
+  .side .tab{border-radius:14px}
+  .side .tab[aria-current="page"]{background:var(--ink);color:var(--on-ink)}
+  .main{padding-block:26px 60px}
+}
+
+/* sheets */
+.sheet{border-radius:28px 28px 0 0}
+@media (min-width:700px){.sheet{border-radius:28px}}
+.card.goal .pill{font-size:11.5px;padding:3px 9px;white-space:nowrap;align-self:flex-start}
+.card.goal .goal-top h3{font-size:17px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--hero-1:#36446F;--hero-2:#1B2340}}
+:root[data-theme="dark"]{--hero-1:#36446F;--hero-2:#1B2340}
