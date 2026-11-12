@@ -312,6 +312,42 @@ select.inp{height:47px}
 .sheet-body{display:flex;flex-direction:column;gap:14px}
 
 .empty{text-align:center;padding:28px 12px;color:var(--muted)}
+/* Apple Pay setup guide */
+.ap-steps{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:18px}
+.ap-step{display:flex;gap:12px;align-items:flex-start}
+.ap-n{flex:0 0 30px;height:30px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-weight:700;font-size:14px}
+.ap-b{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.ap-t{font-size:15.5px}
+.ap-b p{margin:0;font-size:14.5px;line-height:1.55}
+.ios{display:inline-block;border:1.5px solid #2f7cf6;color:#1f6ae0;border-radius:7px;padding:0 6px;font-weight:600;font-size:.95em;line-height:1.5;white-space:nowrap}
+code.key{background:var(--surface-2);border-radius:6px;padding:1px 6px;font-weight:700;font-size:.95em}
+.ap-copy{display:flex;gap:8px;align-items:center;background:var(--surface-2);border-radius:12px;padding:6px 6px 6px 10px}
+.ap-copy code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-size:12px}
+.mock{background:#f2f2f7;color:#111;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:6px;max-width:330px;font:14px/1.3 -apple-system,system-ui,sans-serif;border:1px solid var(--line)}
+.mock .m-row,.mock .m-act,.mock .m-kv,.mock .m-add,.mock .m-search{background:#fff;border-radius:10px;padding:9px 11px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.mock .m-search{color:#8e8e93;justify-content:flex-start}
+.mock .m-row span{color:#8e8e93}
+.mock .hl{outline:2.5px solid #2f7cf6;outline-offset:1px;font-weight:700}
+.mock .hl-ring{outline:2.5px solid #2f7cf6;border-radius:6px;padding:0 3px}
+.mock .dim{opacity:.55}
+.mock .m-btn{align-self:center;background:#2f7cf6;color:#fff;border-radius:99px;padding:6px 22px;font-weight:600}
+.mock .m-blue{color:#2f7cf6;font-weight:600}
+.mock .m-kv i{font-style:normal}
+.mock .m-kv i:first-child{color:#111;font-weight:600}
+.mock .m-kv i:last-child{color:#8e8e93;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.mock .m-add{color:#34c759;justify-content:flex-start}
+.mock .m-bar{display:flex;gap:6px;overflow:hidden;background:#d1d3d9;border-radius:10px;padding:6px}
+.mock .m-bar span{flex:0 0 auto;background:#fff;border-radius:7px;padding:5px 8px;font-size:12.5px}
+.mock .m-swipe{font-size:12.5px;color:#2f7cf6;font-weight:600;text-align:center}
+.mock .m-kbd{background:#d1d3d9;border-radius:10px;padding:8px;text-align:center;letter-spacing:.35em;color:#444;font-size:12px}
+.mock .m-cursor{color:#2f7cf6!important;font-weight:700}
+.mock .m-var{background:#2f7cf6;color:#fff;border-radius:6px;padding:1px 7px;font-size:12.5px}
+.mock .m-pop{background:#fff;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.15);padding:4px;align-self:flex-end;min-width:160px}
+.mock .m-pop div{padding:7px 10px;border-radius:8px}
+.ap-help summary{cursor:pointer;list-style:none}
+.ap-help summary::-webkit-details-marker{display:none}
+.ap-help p{margin:8px 0 0}
+
 .empty b{display:block;color:var(--text);font-size:16px;margin-bottom:4px}
 .menu .row{padding:12px 4px}
 .chev{color:var(--faint)}
@@ -1397,24 +1433,70 @@ function vRates(){
 }
 function vApplePay(){
   const ap = S.settings.applePay || {};
+  const L3 = o => o[LANG] || o.kk;
   if (mode !== "cloud") return `<div class="stack">${backBar("Apple Pay")}<section class="card section"><p style="margin:0">Бұл мүмкіндік аккаунтпен жұмыс істейді: iPhone төлемді серверге жібереді, ал қосымша оны сол жерден алады.</p><div><button class="btn primary" data-act="login">Аккаунтқа кіру</button></div></section></div>`;
   if (!ap.token) return `<div class="stack">${backBar("Apple Pay")}<section class="card section"><h2 style="font-size:16px">Төлеген сәтте шығын өзі жазылсын</h2><p class="small" style="margin:0">iPhone-дағы «Команды» қосымшасында «Транзакция» автоматтандыруы бар. Apple Pay-мен төлегенде ол соманы, дүкен атын және картаны Қалтаға жібереді. Қосымшаны ашқанда төлем шығын болып тұрады. Санатты дүкен атына қарап өзі таңдайды, кейін өзгертсеңіз, келесі жолы есте сақтайды.</p><p class="small muted" style="margin:0">Керек: iOS 17 не жаңасы. Бір рет баптайсыз, шамамен 3 минут.</p><div class="err" id="ap-err"></div><div><button class="btn primary" data-act="apOn">Қосу</button></div></section></div>`;
   const url = (CFG.supabaseUrl || "").replace(/\/$/, "") + "/rest/v1/rpc/qalta_pay";
-  const copy = (label, v) => `<div class="field"><span class="flabel">${label}</span><div style="display:flex;gap:8px;align-items:center"><code class="inp num" style="flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-size:12.5px">${esc(v)}</code><button class="btn sm" data-act="apCopy" data-v="${esc(v)}">Көшіру</button></div></div>`;
-  const steps = [
-    "iPhone-да <b>Shortcuts</b> (Команды) қосымшасын ашыңыз. Төменде <b>Automation</b> → оң жақ жоғарыда <b>+</b> басыңыз.",
-    "Тізімді төмен айналдырып (не <b>Search</b> жолына жазып), <b>Transaction</b> таңдаңыз. <b>Cards</b> ішінен карталарыңызды белгілеңіз. Төменде <b>Run Immediately</b> таңдап, <b>Next</b> басыңыз.",
-    "<b>New Blank Automation</b> басыңыз. Іздеуге <b>Get Variable</b> деп жазып, таңдаңыз. Ішіндегі көк <b>Variable</b> сөзін басып, мәзірден <b>Shortcut Input</b> таңдаңыз.",
-    "Іздеуге <b>Get Contents of URL</b> деп жазып, таңдаңыз. Ол Get Variable-дің <b>астында</b> тұруы керек. «URL» деген жерге төмендегі URL-ды қойыңыз.",
-    "Әрекеттегі көк <b>></b> белгісін басыңыз: <b>Method</b> → <b>POST</b>. <b>Headers</b> → <b>Add new header</b>: Key → <code>apikey</code>, Text → төмендегі apikey.",
-    "<b>Request Body</b> → <b>JSON</b>. <b>Add new field</b> → <b>Text</b> арқылы 4 өріс қосыңыз. <code>token</code> → төмендегі жеке кілтіңіз. <code>amount</code> → мән орнын басып, пернетақтаның үстіндегі көк <b>Variable</b> белгісін басыңыз, содан кейін сол белгіні қайта басып <b>Amount</b> таңдаңыз. <code>merchant</code> → Variable → <b>Merchant</b>. <code>card</code> → Variable → <b>Card or Pass</b>.",
-    "Жоғарыда <b>✓</b> басыңыз. Тексеру үшін төмендегі «Тест төлем» батырмасын басыңыз, не Apple Pay-мен бір нәрсе сатып алыңыз."
-  ].map((t, i) => `<li style="margin-bottom:8px">${t}</li>`).join("");
+  const copyBtn = L3({kk: "Көшіру", ru: "Копировать", en: "Copy"});
+  const copy = v => `<div class="ap-copy"><code>${esc(v)}</code><button class="btn sm primary" data-act="apCopy" data-v="${esc(v)}">${copyBtn}</button></div>`;
+  const k = t => `<span class="ios">${t}</span>`;          // an iPhone button / label, written exactly as on screen
+  const c = t => `<code class="key">${t}</code>`;          // text the person types
+  // little drawings of the iPhone screens (labels are the English iOS ones)
+  const M = {
+    list: `<div class="mock"><div class="m-search">🔍 Transaction</div><div class="m-row">Time of Day</div><div class="m-row">Alarm</div><div class="m-row hl">💳 Transaction <span>›</span></div></div>`,
+    cards: `<div class="mock"><div class="m-row">Cards <span>7 ›</span></div><div class="m-row hl">◉ Run Immediately</div><div class="m-row dim">○ Run After Confirmation</div><div class="m-btn">Next</div></div>`,
+    url: `<div class="mock"><div class="m-act"><b>Get contents of</b> <span class="m-blue">URL</span> <span class="m-blue hl-ring">⌄</span></div></div>`,
+    fields: `<div class="mock"><div class="m-row">Method <span class="m-blue">POST</span></div><div class="m-row">Headers</div><div class="m-kv"><i>apikey</i><i>sb_publishable…</i></div><div class="m-row">Request Body <span class="m-blue">JSON</span></div><div class="m-kv"><i>token</i><i>24d2…</i></div><div class="m-add">⊕ Add new field</div></div>`,
+    bar: `<div class="mock"><div class="m-kv"><i>amount</i><i class="m-cursor">|</i></div><div class="m-bar"><span>Select Variable</span><span>Ask Each Time</span><span>Clipboard</span><span>Current Date</span><span class="hl">Shortcut Input</span></div><div class="m-swipe">${L3({kk: "← саусақпен солға сырғытыңыз", ru: "← проведите пальцем влево", en: "← swipe left"})}</div><div class="m-kbd">q w e r t y u i o p</div></div>`,
+    prop: `<div class="mock"><div class="m-kv"><i>amount</i><i><span class="m-var">Shortcut Input</span></i></div><div class="m-pop"><div class="hl">Amount</div><div>Merchant</div><div>Card or Pass</div><div>Name</div></div></div>`,
+    final: `<div class="mock"><div class="m-row">Request Body <span class="m-blue">JSON</span></div><div class="m-kv"><i>token</i><i>24d2…</i></div><div class="m-kv"><i>amount</i><i><span class="m-var">Amount</span></i></div><div class="m-kv"><i>merchant</i><i><span class="m-var">Merchant</span></i></div><div class="m-kv"><i>card</i><i><span class="m-var">Card or Pass</span></i></div></div>`
+  };
+  const S_ = [
+    {t: {kk: "Shortcuts қосымшасын ашыңыз", ru: "Откройте приложение Shortcuts", en: "Open the Shortcuts app"},
+     d: {kk: `iPhone-дағы ${k("Shortcuts")} қосымшасын ашыңыз (орысша iPhone-да «Команды»). Ол телефонда бар. Таппасаңыз, App Store-дан тегін жүктеңіз.`, ru: `Откройте на iPhone приложение ${k("Shortcuts")} («Команды»). Оно уже есть на телефоне; если нет — скачайте бесплатно в App Store.`, en: `Open the ${k("Shortcuts")} app on your iPhone. It comes with the phone; if it's missing, get it free from the App Store.`}},
+    {t: {kk: "Automation → +", ru: "Automation → +", en: "Automation → +"},
+     d: {kk: `Төменгі жақтағы ${k("Automation")} басыңыз. Сосын оң жақ жоғарыдағы ${k("+")} басыңыз.`, ru: `Внизу нажмите ${k("Automation")}, затем вверху справа ${k("+")}.`, en: `Tap ${k("Automation")} at the bottom, then ${k("+")} at the top right.`}},
+    {t: {kk: "Transaction таңдаңыз", ru: "Выберите Transaction", en: "Choose Transaction"},
+     d: {kk: `Ұзын тізім шығады. Төмендегі ${k("Search")} жолына ${c("Transaction")} деп жазып, ${k("Transaction")} басыңыз.`, ru: `Появится длинный список. В строке ${k("Search")} внизу введите ${c("Transaction")} и нажмите ${k("Transaction")}.`, en: `A long list appears. Type ${c("Transaction")} in the ${k("Search")} bar at the bottom and tap ${k("Transaction")}.`}, m: M.list},
+    {t: {kk: "Карталар және Run Immediately", ru: "Карты и Run Immediately", en: "Cards and Run Immediately"},
+     d: {kk: `${k("Cards")} жолын басып, <b>барлық</b> карталарыңызға ✓ қойыңыз. Төменде ${k("Run Immediately")} таңдаңыз. Сосын ${k("Next")} басыңыз.`, ru: `Нажмите ${k("Cards")} и отметьте ✓ <b>все</b> свои карты. Ниже выберите ${k("Run Immediately")}. Нажмите ${k("Next")}.`, en: `Tap ${k("Cards")} and tick ✓ <b>all</b> your cards. Below, choose ${k("Run Immediately")}. Tap ${k("Next")}.`}, m: M.cards},
+    {t: {kk: "Бос автоматтандыру", ru: "Пустая автоматизация", en: "Blank automation"},
+     d: {kk: `${k("New Blank Automation")} басыңыз.`, ru: `Нажмите ${k("New Blank Automation")}.`, en: `Tap ${k("New Blank Automation")}.`}},
+    {t: {kk: "Get Contents of URL қосыңыз", ru: "Добавьте Get Contents of URL", en: "Add Get Contents of URL"},
+     d: {kk: `${k("Add Action")} іздеу жолына ${c("Get Contents of URL")} деп жазып, жасыл белгісі бар ${k("Get Contents of URL")} басыңыз.`, ru: `В поиске ${k("Add Action")} введите ${c("Get Contents of URL")} и нажмите ${k("Get Contents of URL")} с зелёным значком.`, en: `In the ${k("Add Action")} search, type ${c("Get Contents of URL")} and tap ${k("Get Contents of URL")} (green icon).`}},
+    {t: {kk: "Сілтемені қойыңыз", ru: "Вставьте ссылку", en: "Paste the link"},
+     d: {kk: `Көк ${k("URL")} сөзін басыңыз. Мына сілтемені көшіріп, сол жерге қойыңыз (басып тұрып → ${k("Paste")}):`, ru: `Нажмите синее слово ${k("URL")}. Скопируйте эту ссылку и вставьте туда (удерживайте → ${k("Paste")}):`, en: `Tap the blue word ${k("URL")}. Copy this link and paste it there (press and hold → ${k("Paste")}):`}, x: copy(url)},
+    {t: {kk: "Қосымша өрістерді ашыңыз", ru: "Откройте дополнительные поля", en: "Open more options"},
+     d: {kk: `Сілтеменің жанындағы көк ${k("⌄")} белгісін басыңыз. ${k("Method")}, ${k("Headers")}, ${k("Request Body")} шығады.`, ru: `Нажмите синюю стрелку ${k("⌄")} рядом со ссылкой. Появятся ${k("Method")}, ${k("Headers")}, ${k("Request Body")}.`, en: `Tap the blue ${k("⌄")} next to the link. ${k("Method")}, ${k("Headers")} and ${k("Request Body")} appear.`}, m: M.url},
+    {t: {kk: "Method → POST", ru: "Method → POST", en: "Method → POST"},
+     d: {kk: `${k("Method")} жолындағы ${k("GET")} сөзін басып, ${k("POST")} таңдаңыз.`, ru: `В строке ${k("Method")} нажмите ${k("GET")} и выберите ${k("POST")}.`, en: `In the ${k("Method")} row, tap ${k("GET")} and choose ${k("POST")}.`}},
+    {t: {kk: "apikey қосыңыз", ru: "Добавьте apikey", en: "Add the apikey"},
+     d: {kk: `${k("Headers")} астындағы ${k("Add new header")} басыңыз. Сол жақ (${k("Key")}) → ${c("apikey")} деп жазыңыз. Оң жақ (${k("Text")}) → мынаны қойыңыз:`, ru: `Под ${k("Headers")} нажмите ${k("Add new header")}. Слева (${k("Key")}) введите ${c("apikey")}. Справа (${k("Text")}) вставьте:`, en: `Under ${k("Headers")}, tap ${k("Add new header")}. Left (${k("Key")}): type ${c("apikey")}. Right (${k("Text")}): paste this:`}, x: copy(CFG.supabaseAnonKey || "")},
+    {t: {kk: "token қосыңыз", ru: "Добавьте token", en: "Add the token"},
+     d: {kk: `${k("Request Body")} жанында ${k("JSON")} тұрғанын тексеріңіз. ${k("Add new field")} → ${k("Text")} басыңыз. Сол жақ → ${c("token")}. Оң жақ → жеке кілтіңіз (ешкімге бермеңіз):`, ru: `Убедитесь, что у ${k("Request Body")} стоит ${k("JSON")}. Нажмите ${k("Add new field")} → ${k("Text")}. Слева → ${c("token")}. Справа → ваш личный ключ (никому не давайте):`, en: `Check that ${k("Request Body")} says ${k("JSON")}. Tap ${k("Add new field")} → ${k("Text")}. Left → ${c("token")}. Right → your personal key (keep it private):`}, x: copy(ap.token), m: M.fields},
+    {t: {kk: "amount — соманы қосыңыз", ru: "amount — сумма", en: "amount — the amount"},
+     d: {kk: `Тағы ${k("Add new field")} → ${k("Text")}. Сол жақ → ${c("amount")}. Оң жақтағы бос орынды басыңыз, пернетақта ашылады. Пернетақтаның <b>үстіндегі</b> жолды (${k("Select Variable")}, ${k("Ask Each Time")}…) саусақпен <b>солға сырғытыңыз</b>. ${k("Shortcut Input")} шыққанда, соны басыңыз.`, ru: `Снова ${k("Add new field")} → ${k("Text")}. Слева → ${c("amount")}. Нажмите на пустое место справа — откроется клавиатура. Строку <b>над</b> клавиатурой (${k("Select Variable")}, ${k("Ask Each Time")}…) <b>листайте влево</b>, пока не появится ${k("Shortcut Input")}, и нажмите его.`, en: `Again ${k("Add new field")} → ${k("Text")}. Left → ${c("amount")}. Tap the empty space on the right — the keyboard opens. <b>Swipe left</b> on the row <b>above</b> the keyboard (${k("Select Variable")}, ${k("Ask Each Time")}…) until you see ${k("Shortcut Input")}, and tap it.`}, m: M.bar},
+    {t: {kk: "Amount таңдаңыз", ru: "Выберите Amount", en: "Choose Amount"},
+     d: {kk: `Оң жақта көк ${k("Shortcut Input")} пайда болды. <b>Соны тағы бір басыңыз.</b> Тізімнен ${k("Amount")} таңдаңыз.`, ru: `Справа появилось синее ${k("Shortcut Input")}. <b>Нажмите на него ещё раз</b> и выберите ${k("Amount")}.`, en: `A blue ${k("Shortcut Input")} appears on the right. <b>Tap it once more</b> and choose ${k("Amount")}.`}, m: M.prop},
+    {t: {kk: "merchant пен card", ru: "merchant и card", en: "merchant and card"},
+     d: {kk: `12–13 қадамды тағы екі рет қайталаңыз: ${c("merchant")} → ${k("Shortcut Input")} → ${k("Merchant")}. ${c("card")} → ${k("Shortcut Input")} → ${k("Card or Pass")}. Соңында суреттегідей 4 жол болуы керек.`, ru: `Повторите шаги 12–13 ещё дважды: ${c("merchant")} → ${k("Shortcut Input")} → ${k("Merchant")}. ${c("card")} → ${k("Shortcut Input")} → ${k("Card or Pass")}. В итоге должно быть 4 строки, как на картинке.`, en: `Repeat steps 12–13 twice more: ${c("merchant")} → ${k("Shortcut Input")} → ${k("Merchant")}. ${c("card")} → ${k("Shortcut Input")} → ${k("Card or Pass")}. You should end up with 4 rows like in the picture.`}, m: M.final},
+    {t: {kk: "Сақтаңыз", ru: "Сохраните", en: "Save"},
+     d: {kk: `Оң жақ жоғарыдағы ${k("✓")} (не ${k("Done")}) басыңыз. Болды!`, ru: `Нажмите ${k("✓")} (или ${k("Done")}) вверху справа. Готово!`, en: `Tap ${k("✓")} (or ${k("Done")}) at the top right. That's it!`}},
+    {t: {kk: "Тексеріңіз", ru: "Проверьте", en: "Check it"},
+     d: {kk: `Apple Pay-мен кішкентай бір нәрсе сатып алыңыз. Қалтаны ашыңыз: шығын өзі жазылып тұрады, ал осы беттің жоғарғы жағында «Соңғы Apple Pay төлемі» пайда болады.`, ru: `Купите что-нибудь небольшое через Apple Pay. Откройте Қалта: расход уже записан, а вверху этой страницы появится «Последний платёж Apple Pay».`, en: `Buy something small with Apple Pay. Open Қалта: the expense is already there, and “Last Apple Pay payment” appears at the top of this page.`}}
+  ];
+  const steps = S_.map((st, i) => `<li class="ap-step"><span class="ap-n">${i + 1}</span><div class="ap-b"><b class="ap-t">${L3(st.t)}</b><p>${L3(st.d)}</p>${st.x || ""}${st.m || ""}</div></li>`).join("");
+  const last = sortTx(allTx()).find(t => t.ap && t.n !== "Тест");
+  const status = last
+    ? `<div class="note"><span class="ico">✅</span><div class="mid"><b>${L3({kk: "Жұмыс істеп тұр", ru: "Работает", en: "Working"})}</b><div class="small muted">${L3({kk: "Соңғы Apple Pay төлемі", ru: "Последний платёж Apple Pay", en: "Last Apple Pay payment"})}: <span class="num">${esc(fmt(last.a))}</span> · ${esc(last.n || "")} · ${esc(last.date)}</div></div></div>`
+    : `<div class="note"><span class="ico">⏳</span><div class="mid"><b>${L3({kk: "Әлі төлем келген жоқ", ru: "Платежей ещё не было", en: "No payments yet"})}</b><div class="small muted">${L3({kk: "Төмендегі 16 қадамды жасап, Apple Pay-мен бір рет төлеп көріңіз.", ru: "Выполните 16 шагов ниже и один раз оплатите через Apple Pay.", en: "Do the 16 steps below, then pay once with Apple Pay."})}</div></div></div>`;
+  const help = `<details class="card section ap-help"><summary><b>${L3({kk: "Shortcut Input табылмаса", ru: "Если нет Shortcut Input", en: "Can't find Shortcut Input?"})}</b></summary><p class="small">${L3({kk: `${k("Select Variable")} басқанда әрекеттер тізімі ашылса, оны ${k("Cancel")} арқылы жабыңыз — ол басқа нәрсе. Оң жақтағы бос орынды қайта басып, пернетақта үстіндегі жолды ақырына дейін солға сырғытыңыз. Бәрібір жоқ болса, сол экранның скриншотын жіберіңіз.`, ru: `Если после ${k("Select Variable")} открылся список действий — закройте его кнопкой ${k("Cancel")}, это не то. Снова нажмите на пустое место справа и пролистайте строку над клавиатурой до конца влево. Если всё равно нет — пришлите скриншот этого экрана.`, en: `If ${k("Select Variable")} opens a list of actions, close it with ${k("Cancel")} — that's not it. Tap the empty value again and swipe the row above the keyboard all the way left. Still missing? Send a screenshot of that screen.`})}</p></details>`;
   return `<div class="stack">${backBar("Apple Pay")}
-    <section class="card section"><div class="sec-h"><h2>Баптау</h2><span class="pill ok">Қосулы</span></div><ol class="small" style="margin:0;padding-left:20px">${steps}</ol></section>
-    <section class="card section">${copy("URL", url)}${copy("apikey (заголовок)", CFG.supabaseAnonKey || "")}${copy("token (жеке кілтіңіз — ешкімге бермеңіз)", ap.token)}</section>
+    ${status}
+    <section class="card section"><div class="sec-h"><h2>${L3({kk: "iPhone-да баптау · 16 қадам", ru: "Настройка на iPhone · 16 шагов", en: "iPhone setup · 16 steps"})}</h2><span class="pill ok">${L3({kk: "≈ 5 мин", ru: "≈ 5 мин", en: "≈ 5 min"})}</span></div><p class="small muted" style="margin:0">${L3({kk: "Көк жақтаулы сөздер — iPhone экранындағы батырмалар, дәл солай жазылған. Сұр фонды сөздерді өзіңіз жазасыз.", ru: "Слова в синей рамке — кнопки на экране iPhone, написаны точно как там. Слова на сером фоне вы вводите сами.", en: "Words in a blue frame are buttons on your iPhone, spelled exactly as on screen. Words on grey you type yourself."})}</p><ol class="ap-steps">${steps}</ol></section>
+    ${help}
     <section class="card section"><div class="field"><label for="ap-acc">Карта атауы шотқа сәйкес келмесе, қай шотқа жазу</label><select class="inp" id="ap-acc">${accOptions(ap.acc || defAcc())}</select><span class="small muted">Wallet-тағы карта аты шот атымен бірдей болса (мысалы, Kaspi Gold), сол шотқа өзі жазылады.</span></div></section>
-    <section class="card section"><div class="btns"><button class="btn" data-act="apTest">Тест төлем (1 ₸) жіберу</button><button class="btn danger" data-act="apOff">Өшіру</button></div><span class="small muted" id="ap-msg">Тест сәтті болса, бірнеше секундта операцияларда «Тест · 1 ₸» пайда болады. Оны кейін өшіре саласыз.</span></section>
+    <section class="card section"><div class="btns"><button class="btn" data-act="apTest">Тест төлем (1 ₸) жіберу</button><button class="btn danger" data-act="apOff">Өшіру</button></div><span class="small muted" id="ap-msg">${L3({kk: "Бұл батырма тек Қалта жағын тексереді (iPhone-ды емес). Сәтті болса, операцияларда «Тест · 1 ₸» пайда болады — оны өшіре саласыз.", ru: "Эта кнопка проверяет только сторону Қалта (не iPhone). Если всё хорошо, в операциях появится «Тест · 1 ₸» — его можно удалить.", en: "This button only checks the Қалта side (not your iPhone). If it works, “Test · 1 ₸” appears in transactions — you can delete it."})}</span></section>
   </div>`;
 }
 async function apOn(){

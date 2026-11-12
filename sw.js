@@ -1,6 +1,6 @@
 // Қалта service worker: қосымшаны интернетсіз ашу үшін файлдарды кэштейді.
 // Жаңа нұсқа шығарғанда VERSION-ды өзгертіңіз.
-const VERSION = "qalta-v19";
+const VERSION = "qalta-v20";
 const CORE = [
   "./",
   "./index.html",
@@ -38,8 +38,8 @@ self.addEventListener("fetch", e => {
   if (req.mode === "navigate") {
     e.respondWith(
       fetch(req)
-        .then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put("./index.html", copy)); return res; })
-        .catch(() => caches.match("./index.html"))
+        .then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })
+        .catch(() => caches.match(req).then(hit => hit || caches.match("./index.html")))
     );
     return;
   }
