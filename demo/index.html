@@ -1019,7 +1019,7 @@ async function flush(){
   if (error) { setSync(navigator.onLine ? "err" : "offline"); scheduleFlush(6000); return; }
   for (const p of paths) if (meta.dirty[p] === vers[p]) delete meta.dirty[p];
   saveMeta();
-  if (Object.keys(meta.dirty).length) scheduleFlush(50); else setSync("ok");
+  if (Object.keys(meta.dirty).length) scheduleFlush(50); else { setSync("ok"); clearInbox(); }
 }
 function applyRemote(rows){
   let changed = false;
@@ -1210,8 +1210,14 @@ function importInbox(rows){
     have.add(id); persistMonth(k); n++;
   }
   if (n) { bump(); render(); toast(`Apple Pay: ${n} төлем жазылды`); }
-  // the expenses are saved in the month docs (flushed to the server), so the inbox rows can go
-  if (rows.length && sb) sb.from("qalta_inbox").delete().in("id", rows.map(r => r.id)).then(() => {}, () => {});
+  // the inbox row is deleted only once its expense has reached the server (see flush) — never lost if the phone sleeps first
+  meta.inboxDone = [...new Set([...(meta.inboxDone || []), ...rows.map(r => r.id)])]; saveMeta();
+  if (Object.keys(meta.dirty).length) scheduleFlush(50); else clearInbox();
+}
+function clearInbox(){
+  const ids = meta.inboxDone || [];
+  if (!ids.length || !sb || mode !== "cloud") return;
+  sb.from("qalta_inbox").delete().in("id", ids).then(({error}) => { if (!error) { meta.inboxDone = (meta.inboxDone || []).filter(x => !ids.includes(x)); saveMeta(); } }, () => {});
 }
 const inboxOk = () => mode === "cloud" && !!sb && !!session && (cloudReady || inboxEarly);
 let inboxEarly = false;

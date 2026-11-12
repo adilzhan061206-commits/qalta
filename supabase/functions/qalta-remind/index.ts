@@ -40,19 +40,25 @@ Deno.serve(async (req) => {
     const names: string[] = ((st && st.data && st.data.accounts) || []).map((a: any) => String(a.name || "")).filter(Boolean).sort((a: string, b: string) => b.length - a.length);
     const hit = names.find(n => merchant.length > n.length && merchant.toLowerCase().endsWith(n.toLowerCase()));
     if (hit) merchant = merchant.slice(0, -hit.length).trim();
-    // a merchant the person already categorised is filed automatically by the app — no need to ask
+    // a merchant the person already categorised is filed automatically: just confirm it; a new one: ask
+    let knownCat = "";
     if (merchant) {
       const ym = new Date().toISOString().slice(0, 7), pm = shiftDays(ym + "-01", -1).slice(0, 7);
       const { data: docs } = await sb.from("qalta_docs").select("data").eq("user_id", p.user_id).in("path", ["m/" + ym, "m/" + pm]);
       const m = merchant.toLowerCase();
-      const known = (docs || []).some(d => ((d.data && d.data.items) || []).some((t: any) => t && t.t === "exp" && !t.ask && String(t.n || "").trim().toLowerCase() === m));
-      if (known) return new Response(JSON.stringify({ pay: true, known: true }), { headers: { "Content-Type": "application/json" } });
+      let hitT: any = null;
+      for (const d of docs || []) for (const t of (d.data && d.data.items) || []) if (t && t.t === "exp" && !t.ask && String(t.n || "").trim().toLowerCase() === m && (!hitT || (t.ts || 0) > (hitT.ts || 0))) hitT = t;
+      // well-known chains are filed by the app without asking (same list as CAT_HINTS in index.html)
+      const HINTS: [RegExp, string][] = [[/magnum|small|galmart|anvar|арзан|toimart|interfood|metro|green|супермаркет|маркет|market|продукт/i, "food"], [/yandex|яндекс|uber|indrive|taxi|такси/i, "taxi"], [/kfc|burger|бургер|coffee|кофе|starbucks|cafe|кафе|pizza|пицца|doner|донер|salam|bro|mcdonald|hardee|tomyumbar|sushi|суши|restaurant|ресторан/i, "cafe"], [/apteka|аптека|дәріхана|europharma|biosfera|med|clinic|клиника/i, "health"], [/onay|bus|автобус|azs|азс|helios|sinooil|qazaq oil|kazmunaygas|kmg|gazprom/i, "transport"], [/beeline|kcell|activ|tele2|altel|kazakhtelecom/i, "phone"], [/netflix|spotify|apple\.com|icloud|youtube|yandex plus|kinopoisk|ivi/i, "subs"], [/zara|h&m|lc waikiki|bershka|adidas|nike|defacto|koton|mango/i, "clothes"], [/kino|cinema|кино|chaplin|kinopark|steam|playstation/i, "fun"]];
+      const catId = hitT ? hitT.c : (HINTS.find(([re]) => re.test(m)) || [])[1];
+      if (catId) { const c = ((st && st.data && st.data.cats) || []).find((x: any) => x.id === catId); knownCat = c ? `${c.icon || ""} ${c.name}`.trim() : "✓"; }
     }
     const amt = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(+p.amount)) + " ₸";
     const ask: Record<string, string> = { kk: "қай санатқа жазайын?", ru: "в какую категорию записать?", en: "which category is it?" };
     const res: unknown[] = [];
     for (const s of subs || []) {
-      const payload = JSON.stringify({ title: "Қалта · Apple Pay", body: `${amt}${merchant ? " · " + merchant : ""} — ${ask[s.lang] || ask.kk}`, url: "./?review=1", tag: "qalta-pay" });
+      const msg = knownCat ? `✓ ${amt}${merchant ? " · " + merchant : ""} → ${knownCat}` : `${amt}${merchant ? " · " + merchant : ""} — ${ask[s.lang] || ask.kk}`;
+      const payload = JSON.stringify({ title: "Қалта · Apple Pay", body: msg, url: knownCat ? "./" : "./?review=1", tag: "qalta-pay" });
       try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 3600, urgency: "high" }); res.push({ sent: true }); }
       catch (e: any) { const code = e && e.statusCode; if (code === 404 || code === 410) await sb.from("qalta_push").delete().eq("endpoint", s.endpoint); res.push({ sent: false, code }); }
     }
