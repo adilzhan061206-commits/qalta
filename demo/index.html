@@ -751,6 +751,11 @@ body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
   .fab svg{width:26px;height:26px}
   .main{padding-block:14px 96px}
 }
+
+/* performance: fixed bars on their own layer, off-screen sections skipped until scrolled to, no double-tap zoom wait */
+html{touch-action:manipulation}
+.tabbar,.fab{will-change:transform;transform:translateZ(0)}
+.home2 > .card:nth-child(n+6),.home2 > .grid2,.more2 > .m2-group,.stack > .card.goal{content-visibility:auto;contain-intrinsic-size:auto 320px}
 </style>
 </head>
 <body>
@@ -981,7 +986,13 @@ let meta = {uid: null, dirty: {}};
 function loadMeta(){ try { meta = Object.assign({uid: null, dirty: {}}, JSON.parse(lsGet(META_KEY) || "{}")); } catch {} }
 function saveMeta(){ lsSet(META_KEY, JSON.stringify(meta)); }
 function setSync(s){ syncState = s; const el = $("#sync"); if (el) el.outerHTML = syncHTML(); }
-function saveLocal(){ if (mode === "demo" || mode === "auth") return; lsSet(LS_KEY, JSON.stringify({settings: S.settings, months: S.months})); }
+// Writing everything to localStorage costs ~20 ms on a phone with a couple of years of data, so a burst of
+// changes is written once, a moment later — and straight away when the app goes to the background.
+let saveT = null;
+function saveLocalNow(){ clearTimeout(saveT); saveT = null; if (mode === "demo" || mode === "auth") return; lsSet(LS_KEY, JSON.stringify({settings: S.settings, months: S.months})); }
+function saveLocal(){ if (mode === "demo" || mode === "auth") return; clearTimeout(saveT); saveT = setTimeout(saveLocalNow, 400); }
+addEventListener("pagehide", () => { if (saveT) saveLocalNow(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && saveT) saveLocalNow(); });
 function markDirty(path){
   if (mode === "demo") return;
   saveLocal();
@@ -1014,8 +1025,13 @@ function applyRemote(rows){
   let changed = false;
   for (const r of rows || []) {
     if (!r || !r.path || meta.dirty[r.path]) continue;
-    if (r.path === "settings") { S.settings = normalize(r.data); changed = true; }
-    else if (r.path.startsWith("m/")) { S.months[r.path.slice(2)] = r.data && Array.isArray(r.data.items) ? r.data.items : []; changed = true; }
+    if (r.path === "settings") {
+      const next = normalize(r.data);
+      if (JSON.stringify(next) !== JSON.stringify(S.settings)) { S.settings = next; changed = true; }
+    } else if (r.path.startsWith("m/")) {
+      const k = r.path.slice(2), next = r.data && Array.isArray(r.data.items) ? r.data.items : [];
+      if (JSON.stringify(next) !== JSON.stringify(S.months[k] || [])) { S.months[k] = next; changed = true; }   // our own write echoed back = no change
+    }
   }
   if (changed) { bump(); saveLocal(); }
   return changed;
@@ -1211,10 +1227,12 @@ function subscribeRealtime(){
 }
 window.addEventListener("online", () => { pull(); fetchRates().then(ok => { if (ok && mode !== "auth") render(); }); });
 window.addEventListener("offline", () => { if (mode === "cloud") setSync("offline"); });
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pull(); });
+let lastPull = 0;
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && Date.now() - lastPull > 60000) { lastPull = Date.now(); pull(); } });
 async function signOut(){
   try { if (rtChannel) { await sb.removeChannel(rtChannel); rtChannel = null; } await sb.auth.signOut(); } catch {}
   session = null; cloudReady = false; meta = {uid: null, dirty: {}}; saveMeta();
+  clearTimeout(saveT); saveT = null;
   try { localStorage.removeItem(LS_KEY); localStorage.removeItem("qalta-demo-skip-auth"); } catch {}
   S.settings = defaults(); S.months = {}; bump(); mode = "auth"; ui.tab = "home"; ui.sub = null; render();
 }
@@ -2949,7 +2967,7 @@ const ACT = {
     if (curSel && id !== "usd" && curSel.value === "USD" && ["cash", "kaspi_gold", "kaspi_red", "halyk", "jusan", "otbasy"].includes(id)) curSel.value = "KZT";
     skinPreview(box);
   },
-  lang: el => { if (el.dataset.v === LANG) return; if (LANG !== "kk") { lsSet("qalta-demo-lang", el.dataset.v); location.reload(); return; } setLang(el.dataset.v); render(); },
+  lang: el => { if (el.dataset.v === LANG) return; if (LANG !== "kk") { lsSet("qalta-demo-lang", el.dataset.v); if (saveT) saveLocalNow(); location.reload(); return; } setLang(el.dataset.v); render(); },
   apOn: () => apOn(),
   apOff: () => apOff(),
   apTest: () => apTest(),
@@ -2980,9 +2998,9 @@ document.addEventListener("change", e => {
 /* tooltip */
 const tip = $("#tip");
 function showTip(el, x, y){ tip.textContent = el.getAttribute("data-tip"); tip.hidden = false; tip.style.left = Math.max(80, Math.min(window.innerWidth - 80, x)) + "px"; tip.style.top = y + "px"; }
-document.addEventListener("pointermove", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el) showTip(el, e.clientX, e.clientY); else tip.hidden = true; });
+document.addEventListener("pointermove", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el) showTip(el, e.clientX, e.clientY); else if (!tip.hidden) tip.hidden = true; });
 document.addEventListener("pointerdown", e => { const el = e.target.closest && e.target.closest("[data-tip]"); if (el && e.pointerType !== "mouse") showTip(el, e.clientX, e.clientY); else if (!el) tip.hidden = true; });
-window.addEventListener("scroll", () => { tip.hidden = true; }, {passive: true});
+window.addEventListener("scroll", () => { if (!tip.hidden) tip.hidden = true; }, {passive: true});
 let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 200); });
 
 boot();
@@ -2991,7 +3009,7 @@ boot();
 if (false && "serviceWorker" in navigator && location.protocol === "https:") {
   const hadController = !!navigator.serviceWorker.controller;
   let reloaded = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded) { reloaded = true; if (saveT) saveLocalNow(); location.reload(); } });
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js", {updateViaCache: "none"}).then(reg => {
     const check = () => reg.update().catch(() => {});
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });

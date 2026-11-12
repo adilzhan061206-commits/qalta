@@ -386,3 +386,8 @@ body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
   .fab svg{width:26px;height:26px}
   .main{padding-block:14px 96px}
 }
+
+/* performance: fixed bars on their own layer, off-screen sections skipped until scrolled to, no double-tap zoom wait */
+html{touch-action:manipulation}
+.tabbar,.fab{will-change:transform;transform:translateZ(0)}
+.home2 > .card:nth-child(n+6),.home2 > .grid2,.more2 > .m2-group,.stack > .card.goal{content-visibility:auto;contain-intrinsic-size:auto 320px}
