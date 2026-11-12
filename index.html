@@ -1417,13 +1417,13 @@ function syncHTML(){
 }
 
 
-// open a tab: the bar answers at once (lens starts moving), the page is drawn on the next frame
+// open a tab: page first (one frame), then an uninterrupted lens slide
 function goTab(t){
   if (t === ui.tab && !ui.sub) { window.scrollTo({top: 0, behavior: "smooth"}); return; }
   ui.tab = t; ui.sub = null; closeSheet();
   $$("#tabbar .tab").forEach(b => { if (b.dataset.tab === t) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
-  moveLens();
-  requestAnimationFrame(() => requestAnimationFrame(() => { render(); window.scrollTo(0, 0); }));
+  // draw the new page first, then let the lens travel: a heavy render in the middle of the slide is what made it stutter
+  render(); window.scrollTo(0, 0);
 }
 /* ---------- glass lens under the current tab (phone) ---------- */
 let lensAt = null, lensDrag = null;
