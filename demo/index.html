@@ -1155,6 +1155,8 @@ async function startCloud(s){
   mode = "cloud"; render();
   subscribeRealtime();
   if (!navigator.onLine) { setSync("offline"); return; }
+  // same account as last time: this device already holds its data, so new Apple Pay payments can come in now
+  if (!firstLink) { inboxEarly = true; pullInbox(); }
   try {
     const {data, error} = await sb.from("qalta_docs").select("path,data");
     if (error) throw error;
@@ -1188,32 +1190,37 @@ function guessAcc(card){
   return acc(ap.acc) ? ap.acc : defAcc();
 }
 let inboxBusy = false;
+// Turn inbox rows into expenses (deterministic ids, so a row seen twice is written once), then clear them on the server.
+function importInbox(rows){
+  const have = new Set(allTx().map(t => t.id));
+  let n = 0;
+  for (const r of rows) {
+    const id = "ap-" + r.id;
+    if (have.has(id)) continue;
+    const when = new Date(r.created_at), date = dstr(when), k = mkey(date);
+    // iPhone can glue the card name onto the merchant ("Ip NangoKaspi Gold"): split it off by account names
+    let merchant = (r.merchant || "").trim(), card = (r.card || "").trim();
+    if (!card && merchant) {
+      const hit = S.settings.accounts.map(a => a.name).filter(x => x && merchant.length > x.length && merchant.toLowerCase().endsWith(x.toLowerCase())).sort((a, b) => b.length - a.length)[0];
+      if (hit) { card = hit; merchant = merchant.slice(0, -hit.length).trim(); }
+    }
+    const g = guessCat2(merchant), tx = {id, t: "exp", a: +r.amount, c: g.c, acc: guessAcc(card), date, n: merchant, ts: when.getTime(), ap: 1};
+    if (!g.sure) tx.ask = 1;   // new merchant: ask which category on the home screen
+    S.months[k] = (S.months[k] || []).concat([tx]);
+    have.add(id); persistMonth(k); n++;
+  }
+  if (n) { bump(); render(); toast(`Apple Pay: ${n} төлем жазылды`); }
+  // the expenses are saved in the month docs (flushed to the server), so the inbox rows can go
+  if (rows.length && sb) sb.from("qalta_inbox").delete().in("id", rows.map(r => r.id)).then(() => {}, () => {});
+}
+const inboxOk = () => mode === "cloud" && !!sb && !!session && (cloudReady || inboxEarly);
+let inboxEarly = false;
 async function pullInbox(){
-  if (mode !== "cloud" || !cloudReady || !sb || !session || inboxBusy || !navigator.onLine) return;
+  if (!inboxOk() || inboxBusy || !navigator.onLine) return;
   inboxBusy = true;
   try {
     const {data, error} = await sb.from("qalta_inbox").select("*").order("id");
-    if (error || !data || !data.length) return;
-    const have = new Set(allTx().map(t => t.id));
-    let n = 0;
-    for (const r of data) {
-      const id = "ap-" + r.id;
-      if (have.has(id)) continue;
-      const when = new Date(r.created_at), date = dstr(when), k = mkey(date);
-      // iPhone can glue the card name onto the merchant ("Ip NangoKaspi Gold"): split it off by account names
-      let merchant = (r.merchant || "").trim(), card = (r.card || "").trim();
-      if (!card && merchant) {
-        const hit = S.settings.accounts.map(a => a.name).filter(n => n && merchant.length > n.length && merchant.toLowerCase().endsWith(n.toLowerCase())).sort((a, b) => b.length - a.length)[0];
-        if (hit) { card = hit; merchant = merchant.slice(0, -hit.length).trim(); }
-      }
-      const g = guessCat2(merchant), tx = {id, t: "exp", a: +r.amount, c: g.c, acc: guessAcc(card), date, n: merchant, ts: when.getTime(), ap: 1};
-      if (!g.sure) tx.ask = 1;   // new merchant: ask which category on the home screen
-      S.months[k] = (S.months[k] || []).concat([tx]);
-      persistMonth(k); n++;
-    }
-    if (n) { bump(); render(); toast(`Apple Pay: ${n} төлем жазылды`); }
-    // the expenses are saved in the month docs (flushed to the server), so the inbox rows can go
-    await sb.from("qalta_inbox").delete().in("id", data.map(r => r.id));
+    if (!error && data && data.length) importInbox(data);
   } catch {} finally { inboxBusy = false; }
 }
 function subscribeRealtime(){
@@ -1222,16 +1229,19 @@ function subscribeRealtime(){
     .on("postgres_changes", {event: "*", schema: "public", table: "qalta_docs", filter: "user_id=eq." + session.user.id}, p => {
       if (mode === "cloud" && p.new && applyRemote([p.new])) render();
     })
-    .on("postgres_changes", {event: "INSERT", schema: "public", table: "qalta_inbox", filter: "user_id=eq." + session.user.id}, () => pullInbox())
+    .on("postgres_changes", {event: "INSERT", schema: "public", table: "qalta_inbox", filter: "user_id=eq." + session.user.id}, p => { if (p.new && p.new.id && inboxOk()) importInbox([p.new]); else pullInbox(); })
     .subscribe();
 }
 window.addEventListener("online", () => { pull(); fetchRates().then(ok => { if (ok && mode !== "auth") render(); }); });
 window.addEventListener("offline", () => { if (mode === "cloud") setSync("offline"); });
 let lastPull = 0;
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && Date.now() - lastPull > 60000) { lastPull = Date.now(); pull(); } });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (Date.now() - lastPull > 60000) { lastPull = Date.now(); pull(); } else pullInbox();
+});
 async function signOut(){
   try { if (rtChannel) { await sb.removeChannel(rtChannel); rtChannel = null; } await sb.auth.signOut(); } catch {}
-  session = null; cloudReady = false; meta = {uid: null, dirty: {}}; saveMeta();
+  session = null; cloudReady = false; inboxEarly = false; meta = {uid: null, dirty: {}}; saveMeta();
   clearTimeout(saveT); saveT = null;
   try { localStorage.removeItem(LS_KEY); localStorage.removeItem("qalta-demo-skip-auth"); } catch {}
   S.settings = defaults(); S.months = {}; bump(); mode = "auth"; ui.tab = "home"; ui.sub = null; render();
