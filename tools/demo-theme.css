@@ -300,3 +300,22 @@ body.dragging .tabbar,body.dragging .fab{opacity:0;pointer-events:none;transitio
 .streak,.streak.done{background:var(--surface);color:var(--text);box-shadow:none;border:1px solid var(--line)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .streak{background:var(--surface);color:var(--text)}}
 :root[data-theme="dark"] .streak{background:var(--surface);color:var(--text)}
+
+/* income tiles: same shape as expenses, amounts in green */
+.tile-inc .tile-v{color:var(--pos)}
+.tile-inc.zero .tile-v{color:var(--faint)}
+body.dragging .tile-inc.dragging{opacity:.35}
+
+/* month recap as a shop receipt: paper, typewriter type, torn edge */
+.recap-cta.receipt{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:8px;background:var(--surface);color:var(--text);border:0;border-radius:14px 14px 0 0;
+  padding:16px 18px 18px;margin-bottom:8px;box-shadow:none;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;text-align:left}
+.recap-cta.receipt::after{content:"";position:absolute;left:0;right:0;bottom:-8px;height:8px;
+  background:linear-gradient(-45deg,transparent 6px,var(--surface) 0) 0 0/12px 8px repeat-x,linear-gradient(45deg,transparent 6px,var(--surface) 0) 0 0/12px 8px repeat-x}
+.rc-mono{font-size:11.5px;letter-spacing:.14em;color:var(--muted);font-weight:600}
+.rc-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rc-row b{font:800 28px var(--f-disp);letter-spacing:-.03em}
+.rc-ic{font-size:18px;letter-spacing:.1em;white-space:nowrap}
+.rc-dash{border-top:2px dashed var(--line);margin:2px 0}
+.rc-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
+.rc-foot span:last-child{color:var(--text)}
+.tile-v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:15px}
