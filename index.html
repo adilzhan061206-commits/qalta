@@ -722,6 +722,18 @@ body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
 .m2-av{background:var(--surface-2);color:var(--text);font-size:17px}
 .brand b{font-size:28px}
 
+
+/* tab bar like current iPhone apps: slim floating glass */
+.tabbar{left:14px;right:14px;bottom:calc(6px + env(safe-area-inset-bottom,0px));padding:3px;gap:0;border-radius:26px;
+  background:color-mix(in srgb,var(--surface) 55%,transparent);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);
+  border:.5px solid color-mix(in srgb,var(--text) 10%,transparent);box-shadow:0 6px 24px rgba(13,15,20,.10)}
+.tab{padding:5px 2px 4px;gap:1px;font-size:10px;font-weight:600;border-radius:22px}
+.tab svg{width:20px;height:20px}
+.tab[aria-current="page"]{background:color-mix(in srgb,var(--text) 7%,transparent);color:var(--text)}
+.fab{width:50px;height:50px;right:16px;bottom:calc(70px + env(safe-area-inset-bottom,0px));box-shadow:0 8px 20px rgba(13,15,20,.25)}
+.fab svg{width:24px;height:24px}
+.main{padding-block:14px 112px}
+@media (min-width:900px){.main{padding-block:26px 60px}}
 </style>
 </head>
 <body>
