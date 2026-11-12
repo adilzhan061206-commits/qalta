@@ -1,6 +1,6 @@
 // Қалта service worker: қосымшаны интернетсіз ашу үшін файлдарды кэштейді.
 // Жаңа нұсқа шығарғанда VERSION-ды өзгертіңіз.
-const VERSION = "qalta-v24";
+const VERSION = "qalta-v25";
 const CORE = [
   "./",
   "./index.html",

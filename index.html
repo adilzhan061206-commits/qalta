@@ -1038,6 +1038,55 @@ const I2 = {
   swap: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg>',
   jar: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8M9 3v3l-2 3v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9l-2-3V3"/><path d="M7 13h10"/></svg>'
 };
+
+/* ---------- streak + month story (UI2) ---------- */
+const tri = (kk, ru, en) => (LANG === "ru" ? ru : LANG === "en" ? en : kk);
+// consecutive days with at least one record, ending today (or yesterday if today is still empty)
+function streakInfo(){
+  const days = new Set(allTx().map(t => t.date)), td = today();
+  let n = 0, d = days.has(td) ? td : shiftDay(td, -1);
+  while (days.has(d)) { n++; d = shiftDay(d, -1); }
+  return {n, todayDone: days.has(td)};
+}
+function recapData(k){
+  const st = monthStats(k), pk = shiftMonth(k, -1), ps = monthStats(pk);
+  const exps = st.txs.filter(t => t.t === "exp");
+  const top = Object.entries(st.byCat).sort((a, b) => b[1] - a[1])[0];
+  const big = exps.slice().sort((a, b) => txKZT(b) - txKZT(a))[0];
+  const last = k === curMonth() ? new Date().getDate() : daysIn(k);
+  const spentDays = new Set(exps.map(t => t.date)), recDays = new Set(st.txs.map(t => t.date));
+  let noSpend = 0; for (let d = 1; d <= last; d++) if (!spentDays.has(`${k}-${pad(d)}`)) noSpend++;
+  let best = 0, run = 0; for (let d = 1; d <= last; d++) { if (recDays.has(`${k}-${pad(d)}`)) { run++; best = Math.max(best, run); } else run = 0; }
+  return {k, st, ps, top, big, noSpend, best, recorded: recDays.size, last, count: exps.length};
+}
+function openRecap(k){
+  const r = recapData(k), mName = MONTHS[+k.slice(5) - 1];
+  const topCat = r.top && cat(r.top[0]);
+  const diff = r.ps.exp ? (r.st.exp - r.ps.exp) / r.ps.exp * 100 : null;
+  const saveRate = r.st.inc > 0 ? Math.round((r.st.inc - r.st.exp) / r.st.inc * 100) : null;
+  const tip = !topCat ? tri("Келесі айда әр шығынды жазып көріңіз — қорытынды толығырақ болады.", "В следующем месяце записывайте каждый расход — итог будет точнее.", "Next month, try logging every expense — the summary gets sharper.")
+    : topCat.group === "want" ? tri(`«${topCat.name}» санатына айлық лимит қойып көріңіз — асып кетпес бұрын ескертемін.`, `Поставьте месячный лимит на «${topCat.name}» — предупрежу, прежде чем вы его превысите.`, `Set a monthly limit on “${topCat.name}” — I'll warn you before you go over.`)
+    : saveRate !== null && saveRate < 20 ? tri("Жалақы түскен күні 10%-ын бірден жинаққа салыңыз — байқамай жиналады.", "В день зарплаты сразу откладывайте 10% — накопится незаметно.", "On payday, move 10% to savings right away — it adds up quietly.")
+    : tri("Керемет ай! Осы қарқынды сақтаңыз 💪", "Отличный месяц! Держите темп 💪", "Great month! Keep it up 💪");
+  const S = [
+    {bg: "linear-gradient(160deg,#1B1F3B,#3A2F7A 60%,#7B4DFF)", html: `<small>${tri("Сіздің айыңыз", "Ваш месяц", "Your month")}</small><h1>${mName}</h1><p>${tri("Барлығы жұмсалды", "Всего потрачено", "Total spent")}</p><b class="st-big num">${fmt(r.st.exp)}</b><p class="st-sub">${r.count} ${tri("шығын", "расходов", "expenses")} · ${r.recorded} ${tri("күн жазылды", "дн. с записями", "days logged")}</p>`},
+    {bg: "linear-gradient(160deg,#3B0F2E,#B0245F 55%,#FF7A59)", html: topCat ? `<small>${tri("Ең көп ақша кетті", "Больше всего ушло на", "Most money went to")}</small><div class="st-emoji">${esc(topCat.icon)}</div><h1>${esc(topCat.name)}</h1><b class="st-big num">${fmt(r.top[1])}</b><p class="st-sub">${tri("барлық шығынның", "от всех расходов", "of all spending")} ${Math.round(r.top[1] / (r.st.exp || 1) * 100)}%</p>` : `<h1>${tri("Әзірге шығын жоқ", "Расходов пока нет", "No expenses yet")}</h1>`},
+    {bg: "linear-gradient(160deg,#0B2E2A,#0F7A5E 55%,#4BE3A4)", html: r.big ? `<small>${tri("Ең қымбат сатып алу", "Самая дорогая покупка", "Biggest purchase")}</small><div class="st-emoji">${esc((cat(r.big.c) || {}).icon || "🧾")}</div><b class="st-big num">${fmt(txKZT(r.big))}</b><h2>${esc(r.big.n || (cat(r.big.c) || {}).name || "")}</h2><p class="st-sub">${esc(r.big.date.split("-").reverse().join("."))}</p>` : `<h1>—</h1>`},
+    {bg: "linear-gradient(160deg,#2A1B05,#B5760A 55%,#FFD25C)", html: `<small>${tri("Әдеттер", "Привычки", "Habits")}</small><div class="st-pair"><div><b class="num">${r.noSpend}</b><span>${tri("шығынсыз күн", "дн. без трат", "no-spend days")}</span></div><div><b class="num">🔥 ${r.best}</b><span>${tri("ең ұзын серия", "лучшая серия", "best streak")}</span></div></div><p class="st-sub">${r.noSpend >= 8 ? tri("Шығынсыз күндер көп — бұл жақсы белгі.", "Много дней без трат — хороший знак.", "Lots of no-spend days — a great sign.") : tri("Келесі айда аптасына 2 шығынсыз күн жасап көріңіз.", "В следующем месяце попробуйте 2 дня без трат в неделю.", "Next month, try 2 no-spend days a week.")}</p>`},
+    {bg: "linear-gradient(160deg,#081A33,#1F5FA8 55%,#5EC8FF)", html: `<small>${tri("Өткен аймен салыстырғанда", "По сравнению с прошлым месяцем", "Compared with last month")}</small><b class="st-big num">${diff === null ? "—" : (diff > 0 ? "+" : "") + Math.round(diff) + "%"}</b><p>${diff === null ? tri("Өткен айда дерек жоқ", "Нет данных за прошлый месяц", "No data for last month") : diff > 0 ? tri("шығын көбейді", "расходы выросли", "spending went up") : tri("шығын азайды 👏", "расходы снизились 👏", "spending went down 👏")}</p>${saveRate !== null ? `<div class="st-pair"><div><b class="num">${saveRate}%</b><span>${tri("кірістің қалғаны", "дохода осталось", "of income kept")}</span></div><div><b class="num">${fmt(r.st.sav)}</b><span>${tri("жинаққа салынды", "в накопления", "to savings")}</span></div></div>` : ""}`},
+    {bg: "linear-gradient(160deg,#111,#2B2B2F 60%,#45454C)", html: `<small>${tri("Келесі айға бір кеңес", "Один совет на следующий месяц", "One tip for next month")}</small><div class="st-emoji">💡</div><h2>${esc(tip)}</h2><div class="st-btns">${topCat && topCat.group === "want" ? `<button class="btn" data-act="recapGo" data-sub="budgets">${tri("Лимит қою", "Поставить лимит", "Set a limit")}</button>` : ""}<button class="btn ghost" data-act="recapClose">${tri("Жабу", "Закрыть", "Close")}</button></div>`}
+  ];
+  let i = 0;
+  const el = document.createElement("div"); el.className = "story"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", mName);
+  const draw = () => {
+    el.style.background = S[i].bg;
+    el.innerHTML = `<div class="st-bars">${S.map((_, j) => `<i class="${j < i ? "done" : j === i ? "on" : ""}"></i>`).join("")}</div><button class="st-x" data-act="recapClose" aria-label="${tri("Жабу", "Закрыть", "Close")}">✕</button><div class="st-body" key="${i}">${S[i].html}</div><div class="st-nav"><span data-st="-1"></span><span data-st="1"></span></div>`;
+  };
+  el.addEventListener("click", e => { const n = e.target.closest("[data-st]"); if (!n) return; const j = i + +n.dataset.st; if (j >= S.length) { closeRecap(); return; } i = Math.max(0, j); draw(); });
+  el.addEventListener("keydown", e => { if (e.key === "ArrowRight") { i = Math.min(S.length - 1, i + 1); draw(); } else if (e.key === "ArrowLeft") { i = Math.max(0, i - 1); draw(); } else if (e.key === "Escape") closeRecap(); });
+  el.tabIndex = -1; draw(); document.body.appendChild(el); el.focus();
+}
+function closeRecap(){ const el = document.querySelector(".story"); if (el) el.remove(); }
 function vHome2(){
   const k = curMonth(), st = monthStats(k), bal = balances(), total = totalBalance();
   const dim = daysIn(k), day = new Date().getDate(), left = dim - day + 1;
@@ -1062,10 +1111,11 @@ function vHome2(){
   else if (free > 0) dayLine = `Бүгін жұмсауға болады <b class="num">≈ ${fmt(free / left)}</b> · айдың соңына ${left} күн`;
   else dayLine = `Бұл айда шығын кірістен ${fmt(-free)} асып кетті.`;
   return `<div class="stack home2">
-    <section class="h2-total"><span class="h2-lbl">Барлық шоттарда</span><div class="h2-big num">${fmt(total)}</div><div class="h2-day">${dayLine}</div></section>
+    <section class="h2-total"><div class="h2-head"><span class="h2-lbl">Барлық шоттарда</span>${(() => { const si = streakInfo(); return `<button class="streak${si.todayDone ? " done" : ""}" data-act="streakTip">🔥 ${si.n} ${tri("күн", "дн.", si.n === 1 ? "day" : "days")}</button>`; })()}</div><div class="h2-big num">${fmt(total)}</div><div class="h2-day">${dayLine}</div></section>
     <div class="qas">${qa(I2.minus, "Шығын", `data-act="newTx" data-type="exp"`)}${qa(I2.plus, "Кіріс", `data-act="newTx" data-type="inc"`)}${qa(I2.swap, "Аударым", `data-act="newTx" data-type="tr"`)}${qa(I2.jar, "Жинақ", `data-act="tab" data-tab="goals"`)}</div>
     <div class="wallet" role="list">${cards}</div>
     <section class="card section"><div class="sec-h"><h2>Шығындар</h2><button class="link" data-act="newSplit">👥 Счет бөлу</button></div><div class="tiles">${tiles}</div><p class="drag-hint">Картаны ұстап, санатқа сүйреңіз — шығын жазылады. Кірісті картаға сүйресеңіз — табыс, картаны картаға — аударым.</p></section>
+    ${(() => { const rk = day <= 7 ? shiftMonth(k, -1) : k; return `<button class="recap-cta" data-act="recap" data-k="${rk}"><span class="rc-ic">✨</span><span class="rc-t"><b>${MONTHS[+rk.slice(5) - 1]} ${tri("қорытындысы", "— итоги", "recap")}</b><small>${tri("Айыңыз 6 слайдта", "Ваш месяц в 6 слайдах", "Your month in 6 slides")}</small></span><span class="rc-go">→</span></button>`; })()}
     <section class="card section month2"><div class="sec-h"><h2>${MONTHS[+k.slice(5) - 1]}</h2>${allTx().length ? `<span class="small muted">Ай соңына болжам: <b class="num">≈ ${fmt(forecast().end)}</b></span>` : ""}</div>
       <div class="m2-row"><div><small>Кіріс</small><b class="num pos">+${fmt(st.inc)}</b></div><div><small>Шығын</small><b class="num">−${fmt(st.exp)}</b></div><div><small>Жинаққа</small><b class="num">${fmt(st.sav)}</b></div></div>
       <div class="m2-bar"><i class="m2-exp" style="width:${spentP}%"></i><i class="m2-sav" style="width:${savP}%"></i></div></section>
@@ -2376,6 +2426,10 @@ const ACT = {
   import: () => $("#import-file").click(),
   wipe: el => armDelete(el, wipe),
   demo: () => enterDemo(),
+  recap: el => openRecap(el.dataset.k),
+  recapClose: () => closeRecap(),
+  recapGo: el => { closeRecap(); ui.tab = "more"; ui.sub = el.dataset.sub; render(); window.scrollTo(0, 0); },
+  streakTip: () => { const si = streakInfo(); toast(si.todayDone ? tri(`Бүгін жаздыңыз ✓ Серия: ${si.n} күн. Ертең де жалғастырыңыз!`, `Сегодня записано ✓ Серия: ${si.n} дн. Продолжайте завтра!`, `Logged today ✓ Streak: ${si.n} days. Keep it going tomorrow!`) : tri("Бүгін әлі ештеңе жазбадыңыз — бір операция қоссаңыз, серия жалғасады.", "Сегодня ещё ничего не записано — добавьте одну операцию, и серия продолжится.", "Nothing logged today yet — add one entry to keep the streak.")); },
   pushOn: () => pushOn(),
   pushOff: () => pushOff(),
   pickSkin: el => {
