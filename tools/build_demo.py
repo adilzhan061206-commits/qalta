@@ -33,10 +33,10 @@ script = rep(script, 'if (!hasCloud()) { mode = "local"; render(); return; }',
 script = rep(script, '$("#main").innerHTML = `${banner}<div class="topbar">',
   '$("#main").innerHTML = `<div class="demo-ribbon"><span>${({kk: "Жаңа дизайн · демо. Деректер бөлек, мысал ретінде.", ru: "Новый дизайн · демо. Данные отдельные, для примера.", en: "New design · demo. Separate sample data."})[LANG] || ""}</span><a href="../">${({kk: "← Қазіргі нұсқа", ru: "← Текущая версия", en: "← Current version"})[LANG] || ""}</a></div>${banner}<div class="topbar">')
 # the new look: the redesigned home and wallet cards, fonts, then the theme after the base styles so it wins
-script = rep(script, "const UI2 = false;", "const UI2 = true;")
+script = script.replace("const UI2 = false;", "const UI2 = true;")
 fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600&display=swap">'
 head = re.sub(r'<link rel="stylesheet" href="https://fonts.googleapis.com/css2[^"]*">', fonts, head, count=1)
-head = rep(head, "</style>", theme + "\n</style>")
+if "Қалта v2" not in head: head = rep(head, "</style>", theme + "\n</style>")
 
 out = root / "demo" / "index.html"
 out.parent.mkdir(exist_ok=True)

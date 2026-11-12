@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Қалта · демо</title>
 <meta name="description" content="Тегін жеке бюджет: шығын, кіріс, жинақ мақсаттары және айлық талдау.">
-<meta name="theme-color" content="#e0313a">
+<meta name="theme-color" content="#F3F4F6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -746,7 +746,7 @@ body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
 <script>
 (function(){
 "use strict";
-const UI2 = true;   // the redesigned home + wallet cards; switched on only in demo/ (tools/build_demo.py)
+const UI2 = true;    // the redesigned home + wallet cards (set false to get the earlier layout back)
 /* ---------- helpers ---------- */
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
