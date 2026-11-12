@@ -32,24 +32,11 @@ script = rep(script, 'if (!hasCloud()) { mode = "local"; render(); return; }',
 # ribbon above every page
 script = rep(script, '$("#main").innerHTML = `${banner}<div class="topbar">',
   '$("#main").innerHTML = `<div class="demo-ribbon"><span>${({kk: "Жаңа дизайн · демо. Деректер бөлек, мысал ретінде.", ru: "Новый дизайн · демо. Данные отдельные, для примера.", en: "New design · demo. Separate sample data."})[LANG] || ""}</span><a href="../">${({kk: "← Қазіргі нұсқа", ru: "← Текущая версия", en: "← Current version"})[LANG] || ""}</a></div>${banner}<div class="topbar">')
-# the new look: fonts, a generated guilloche rosette, then the theme after the base styles so it wins
-import math, urllib.parse
-def rosette():
-    paths = []
-    for k, (R, r, d, op) in enumerate([(100, 37, 58, .22), (92, 23, 46, .16), (78, 29, 34, .13), (60, 17, 30, .12)]):
-        pts = []
-        steps = 900
-        for i in range(steps + 1):
-            t = 2 * math.pi * 18 * i / steps
-            x = (R - r) * math.cos(t) + d * math.cos((R - r) / r * t)
-            y = (R - r) * math.sin(t) - d * math.sin((R - r) / r * t)
-            pts.append(f"{150 + x * 1.0:.1f},{150 + y * 1.0:.1f}")
-        paths.append(f'<polyline points="{" ".join(pts)}" fill="none" stroke="#fff" stroke-opacity="{op}" stroke-width=".6"/>')
-    svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">' + "".join(paths) + "</svg>"
-    return "url(\"data:image/svg+xml," + urllib.parse.quote(svg) + "\")"
-fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Literata:opsz,wght@7..72,600;7..72,700;7..72,800&family=JetBrains+Mono:wght@500;600&display=swap">'
+# the new look: the redesigned home and wallet cards, fonts, then the theme after the base styles so it wins
+script = rep(script, "const UI2 = false;", "const UI2 = true;")
+fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800;900&display=swap">'
 head = re.sub(r'<link rel="stylesheet" href="https://fonts.googleapis.com/css2[^"]*">', fonts, head, count=1)
-head = rep(head, "</style>", ":root{--guilloche:" + rosette() + "}\n" + theme + "\n</style>")
+head = rep(head, "</style>", theme + "\n</style>")
 
 out = root / "demo" / "index.html"
 out.parent.mkdir(exist_ok=True)

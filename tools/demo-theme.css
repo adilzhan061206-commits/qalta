@@ -1,135 +1,158 @@
-/* ===== Қалта v2 — "банкнота" =====
-   Idea: the app is a wallet, so its parts look like what lives in one.
-   Balance = a tenge banknote (guilloche rosette, microtext frame, engraved serif numerals).
-   Categories and accounts = coins with a reeded edge. Goals = savings envelopes.
-   Everything else stays quiet: banknote-paper ground, ink-teal text, one gold accent. */
+/* ===== Қалта v2 — "әмиян" =====
+   The interface stays neutral (paper white, ink black buttons) so the colour comes from
+   the person's own bank cards, lined up like a real wallet. Big round action buttons,
+   category tiles instead of bubbles. */
 :root{
-  --bg:#ECF0EB; --surface:#FAFBF8; --surface-2:#E2E8E1; --line:#D1DAD1;
-  --text:#0F2522; --muted:#596963; --faint:#98A79F;
-  --accent:#0E5A52; --accent-2:#0A463F; --accent-soft:#D9E8E2; --on-accent:#F6FBF8;
-  --gold:#C38F17; --gold-2:#A6780C; --on-gold:#231A03;
-  --note-1:#0F4A44; --note-2:#17685E; --note-ink:#EAF5EF;
-  --pos:#1D7A4C; --neg:#B8432C; --warn:#A86A0A; --warn-soft:#F6E9CC;
-  --shadow:0 1px 0 rgba(15,37,34,.06),0 6px 18px rgba(15,37,34,.06);
-  --r:16px;
-  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  --f-disp:"Literata",Georgia,"Times New Roman",serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --bg:#F3F4F6; --surface:#FFFFFF; --surface-2:#F1F2F5; --line:#E6E8EC;
+  --text:#0D0F14; --muted:#6B7180; --faint:#A6ABB6;
+  --accent:#0D0F14; --accent-2:#2A2E38; --accent-soft:#EEF0F3; --on-accent:#FFFFFF;
+  --pos:#14915C; --neg:#E5484D; --warn:#C77A0A; --warn-soft:#FFF4DE;
+  --shadow:0 1px 2px rgba(13,15,20,.04),0 6px 20px rgba(13,15,20,.05);
+  --r:22px;
+  --f-body:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --f-disp:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0B1412; --surface:#121E1B; --surface-2:#1A2925; --line:#24372F;
-  --text:#E6EEE9; --muted:#8FA29A; --faint:#5A6D66;
-  --accent:#5BC3B2; --accent-2:#45A897; --accent-soft:#163430; --on-accent:#06231F;
-  --gold:#E2B347; --gold-2:#C99A2E; --on-gold:#241A02;
-  --note-1:#0F3F3A; --note-2:#195C53; --note-ink:#E3F1EA;
-  --pos:#4FC98A; --neg:#F07A62; --warn:#E8B04A; --warn-soft:#3A2D12;
-  --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+  --bg:#0B0C10; --surface:#16181E; --surface-2:#1E2129; --line:#272A33;
+  --text:#F2F3F6; --muted:#9298A6; --faint:#5C6270;
+  --accent:#F2F3F6; --accent-2:#D9DCE2; --accent-soft:#22252D; --on-accent:#0D0F14;
+  --pos:#3DD598; --neg:#FF6B70; --warn:#F2B441; --warn-soft:#3A2D12;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
 }}
 :root[data-theme="dark"]{
-  --bg:#0B1412; --surface:#121E1B; --surface-2:#1A2925; --line:#24372F;
-  --text:#E6EEE9; --muted:#8FA29A; --faint:#5A6D66;
-  --accent:#5BC3B2; --accent-2:#45A897; --accent-soft:#163430; --on-accent:#06231F;
-  --gold:#E2B347; --gold-2:#C99A2E; --on-gold:#241A02;
-  --note-1:#0F3F3A; --note-2:#195C53; --note-ink:#E3F1EA;
-  --pos:#4FC98A; --neg:#F07A62; --warn:#E8B04A; --warn-soft:#3A2D12;
-  --shadow:0 1px 0 rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.25);
+  --bg:#0B0C10; --surface:#16181E; --surface-2:#1E2129; --line:#272A33;
+  --text:#F2F3F6; --muted:#9298A6; --faint:#5C6270;
+  --accent:#F2F3F6; --accent-2:#D9DCE2; --accent-soft:#22252D; --on-accent:#0D0F14;
+  --pos:#3DD598; --neg:#FF6B70; --warn:#F2B441; --warn-soft:#3A2D12;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
 }
-body{font:15px/1.5 var(--f-body)}
-.num,.amt,.bub-v,.kpi b{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.kpi b,.hero-row b{font-family:var(--f-disp);font-weight:700;letter-spacing:0}
+body{font:15px/1.45 var(--f-body)}
+.num{font-variant-numeric:tabular-nums}
 
-/* demo ribbon */
-.demo-ribbon{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px dashed var(--faint);color:var(--muted);border-radius:10px;padding:7px 11px;font-size:12.5px;margin-bottom:12px}
-.demo-ribbon a{color:var(--accent);font-weight:700;text-decoration:none;white-space:nowrap}
+.demo-ribbon{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);color:var(--muted);border-radius:14px;padding:8px 12px;font-size:12.5px;margin-bottom:10px}
+.demo-ribbon a{color:var(--text);font-weight:700;text-decoration:none;white-space:nowrap}
 
-/* title: engraved serif, the logo is a coin */
-.brand b{font:700 26px var(--f-disp);letter-spacing:-.01em}
-.logo{width:34px;height:34px;border-radius:50%;color:var(--on-gold);font:700 17px var(--f-disp);
-  background:radial-gradient(circle at 35% 30%,#F3D37A,var(--gold) 55%,var(--gold-2));
-  box-shadow:inset 0 0 0 2px rgba(255,255,255,.35),inset 0 0 0 4px var(--gold-2),0 2px 6px rgba(120,85,10,.25)}
-.page-title,.sec-h h2,.goal-top h3{font-family:var(--f-disp);font-weight:700;letter-spacing:-.005em}
-.sec-h h2{font-size:18px}
-.sync{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.topbar{margin-bottom:6px}
+.brand b{font:800 24px var(--f-disp);letter-spacing:-.03em}
+.logo{background:var(--text);color:var(--bg);border-radius:12px;box-shadow:none;font-family:var(--f-disp)}
+.sync{font-size:12px}
+.card{border-radius:var(--r);box-shadow:var(--shadow);padding:18px}
+.sec-h h2{font-size:18px;font-weight:800;letter-spacing:-.02em}
+.sec-h .link{color:var(--text);text-decoration:underline;text-underline-offset:3px}
 
-/* plain cards: paper with a hairline, little shadow */
-.card{border-radius:var(--r);border:1px solid var(--line);box-shadow:none;background:var(--surface)}
-.kpi{border-radius:var(--r);border:1px solid var(--line);box-shadow:none}
-.kpi b{font-size:19px}
+/* total */
+.h2-total{display:flex;flex-direction:column;gap:2px;padding:4px 2px 0}
+.h2-lbl{font-size:13px;color:var(--muted);font-weight:600}
+.h2-big{font:800 clamp(40px,11vw,56px)/1.05 var(--f-disp);letter-spacing:-.045em}
+.h2-day{font-size:14px;color:var(--muted)}
+.h2-day b{color:var(--text)}
 
-/* ---- the banknote ---- */
-.hero{border-radius:14px;padding:26px 22px 20px;color:var(--note-ink);
-  background:var(--guilloche) right -120px top -110px/300px 300px no-repeat,
-             repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 2px,transparent 2px 7px),
-             linear-gradient(120deg,var(--note-1),var(--note-2));
-  box-shadow:inset 0 0 0 6px var(--note-1),inset 0 0 0 7px rgba(255,255,255,.28),0 10px 26px rgba(15,74,68,.25)}
-.hero::after{content:"ҚАЛТА · QALTA · ҚАЛТА · QALTA · ҚАЛТА · QALTA · ҚАЛТА · QALTA · ҚАЛТА · QALTA · ҚАЛТА · QALTA · ҚАЛТА · QALTA · ҚАЛТА · QALTA";
-  position:absolute;left:14px;right:14px;top:8px;width:auto;height:auto;background:none;border-radius:0;
-  font:600 7px/1 var(--f-mono);letter-spacing:.32em;color:rgba(255,255,255,.4);white-space:nowrap;overflow:hidden}
-.hero .lbl{font:600 11px var(--f-mono);text-transform:uppercase;letter-spacing:.14em;opacity:.75}
-.hero .big{font:800 clamp(36px,10vw,50px)/1 var(--f-disp);letter-spacing:-.02em;margin:8px 0 18px;text-shadow:0 1px 0 rgba(0,0,0,.25)}
-.hero-row{gap:6px}
-.hero-row div{background:transparent;border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:8px 10px}
-.hero-row small{font:600 10px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;opacity:.7}
-.hero-day{opacity:.92}
+/* the wallet: real-looking bank cards in a swipeable row */
+.wallet{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-inline:16px;margin-inline:-16px;padding:6px 16px 14px;scrollbar-width:none}
+.wallet::-webkit-scrollbar{display:none}
+.wcard,.wcard.bub{flex:0 0 min(78vw,300px);aspect-ratio:1.586;max-width:100%;scroll-snap-align:start;position:relative;display:flex;flex-direction:column;justify-content:space-between;align-items:stretch;gap:0;
+  padding:16px 18px;border:0;border-radius:18px;background:var(--cbg);color:var(--cfg);text-align:left;overflow:hidden;
+  box-shadow:0 1px 1px rgba(0,0,0,.08),0 10px 24px rgba(13,15,20,.16);font-family:var(--f-body);transition:transform .15s}
+.wcard::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 80% at 100% 0%,rgba(255,255,255,.28),transparent 55%),radial-gradient(90% 60% at 0% 100%,rgba(0,0,0,.18),transparent 60%)}
+.wcard:active{transform:scale(.98)}
+.wc-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative}
+.wc-mark{font-weight:800;font-size:17px;letter-spacing:-.02em}
+.wc-cur{font-size:11px;font-weight:700;letter-spacing:.08em;opacity:.75}
+.wc-chip{position:relative;width:38px;height:28px;border-radius:6px;background:linear-gradient(135deg,#F3E2A8,#C9A64F 50%,#E9D18A);box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.wc-chip::after{content:"";position:absolute;inset:6px 0;border-block:1px solid rgba(0,0,0,.2)}
+.wc-sym{position:absolute;right:14px;bottom:-26px;font:900 120px/1 var(--f-disp);opacity:.14;pointer-events:none}
+.wc-bot{display:flex;flex-direction:column;position:relative}
+.wc-name{font-size:12.5px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wc-bal{font:800 26px/1.15 var(--f-disp);letter-spacing:-.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcard .wc-ic{display:none}
+.wadd{background:transparent!important;border:2px dashed var(--line);box-shadow:none;color:var(--muted);align-items:center;justify-content:center;gap:6px;font-weight:600}
+.wadd::before{display:none}
+.wadd-plus{font-size:30px;line-height:1;color:var(--text)}
+body.dragging .wcard.target{outline:2px dashed var(--faint);outline-offset:3px}
+body.dragging .wcard.drop-ok{outline:3px solid var(--text);outline-offset:3px;transform:scale(1.03)}
 
-/* ---- coins: categories and accounts ---- */
-.bub-c{width:54px;height:54px;background:var(--surface);box-shadow:inset 0 0 0 2px var(--line),0 1px 0 rgba(0,0,0,.05)}
-.bub-c::after{content:"";position:absolute;inset:-3px;border-radius:50%;pointer-events:none;
-  background:repeating-conic-gradient(var(--line) 0 3deg,transparent 3deg 7deg);
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))}
-.bub.acc .bub-c{background:radial-gradient(circle at 35% 30%,#FFF6DA,color-mix(in srgb,var(--gold) 30%,var(--surface)))}
-.bub.acc .bub-c::after{background:repeating-conic-gradient(color-mix(in srgb,var(--gold) 70%,transparent) 0 3deg,transparent 3deg 7deg)}
-.bub.inc .bub-c{background:radial-gradient(circle at 35% 30%,var(--surface),var(--accent-soft))}
-.bub.add .bub-c::after{display:none}
-.bub-n{font-size:11.5px}
-.bub-v{font-size:12px;font-weight:600}
+/* quick actions: big round buttons */
+.qas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.qa{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--text);font-weight:600;font-size:12.5px;padding:0}
+.qa-c{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;background:var(--surface);box-shadow:var(--shadow);border:1px solid var(--line);transition:transform .12s}
+.qa:first-child .qa-c{background:var(--text);color:var(--bg);border-color:var(--text)}
+.qa:active .qa-c{transform:scale(.94)}
 
-/* ---- envelopes: savings goals ---- */
-.card.goal{position:relative;padding-top:58px;overflow:hidden;background:var(--surface)}
-.card.goal::before{content:"";position:absolute;left:-1px;right:-1px;top:-1px;height:54px;background:var(--surface-2);
-  clip-path:polygon(0 0,100% 0,50% 100%);border-bottom:0}
-.card.goal::after{content:"";position:absolute;left:calc(50% - 11px);top:42px;width:22px;height:22px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#E9A08A,#B8432C 60%,#8E2F1D);box-shadow:0 1px 2px rgba(0,0,0,.25)}
-.card.goal .goal-top{position:relative;z-index:1}
-.card.goal .goal-nums b{font:800 28px var(--f-disp)}
-.card.goal .bar{height:10px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--surface-2) 0 10px,color-mix(in srgb,var(--surface-2) 70%,var(--line)) 10px 11px)}
-.card.goal .bar i{border-radius:3px}
+/* month summary */
+.m2-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.m2-row small{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.m2-row b{font:800 19px var(--f-disp);letter-spacing:-.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.m2-bar{display:flex;height:10px;border-radius:99px;background:var(--surface-2);overflow:hidden;gap:2px}
+.m2-bar i{display:block;height:100%}
+.m2-exp{background:var(--text);border-radius:99px}
+.m2-sav{background:var(--pos);border-radius:99px}
 
-/* controls */
-.seg{border-radius:10px;background:var(--surface-2)}
-.seg button{border-radius:8px}
-.seg button[aria-pressed="true"]{background:var(--surface);color:var(--accent);box-shadow:inset 0 0 0 1px var(--line)}
-.btn{border-radius:10px}
-.btn.primary{background:var(--accent);color:var(--on-accent)}
-.chip{border-radius:8px}
-.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
-.inp{border-radius:10px;background:var(--surface-2);border:1px solid var(--line)}
-.inp.big{font:800 32px var(--f-disp)}
-.pill{border-radius:6px;font-family:var(--f-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}
-.bar{border-radius:3px}
-.bar > i{border-radius:3px}
-.ico{border-radius:10px;background:var(--surface-2)}
-.row + .row{border-top:1px dashed var(--line)}
-.day-h{font-family:var(--f-mono);font-size:11px}
+/* expense tiles */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (min-width:640px){.tiles{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.tile,.bub.tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px;border:0;border-radius:16px;background:var(--surface-2);text-align:left;color:var(--text);min-width:0}
+.tile .bub-c,.bub.tile .bub-c{width:auto;height:auto;background:none;box-shadow:none;font-size:22px;border-radius:0}
+.tile-n{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tile-v{font:800 16px var(--f-disp);letter-spacing:-.02em}
+.tile.zero .tile-v{color:var(--faint);font-weight:600}
+.tile .bar{width:100%;height:5px;margin-top:2px}
+.tile-add{border:2px dashed var(--line);background:transparent;justify-content:center;align-items:center}
+.tile-add .bub-c{color:var(--text)}
+body.dragging .tile.target{outline:2px dashed var(--faint);outline-offset:1px}
+body.dragging .tile.drop-ok{outline:3px solid var(--text);outline-offset:1px;transform:scale(1.04)}
+body.dragging .bub.tile .bub-c{outline:0!important;transform:none}
 
-/* tab bar: paper strip; the active tab gets a gold coin above it */
-.tabbar{border-top:1px solid var(--line);background:color-mix(in srgb,var(--surface) 94%,transparent)}
-.tab{position:relative}
-.tab[aria-current="page"]{color:var(--accent);font-weight:700}
-.tabbar .tab[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:calc(50% - 4px);width:8px;height:8px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#F3D37A,var(--gold) 60%,var(--gold-2))}
-/* the + button is a gold coin with a reeded edge */
-.fab{background:radial-gradient(circle at 35% 30%,#F5DB8C,var(--gold) 55%,var(--gold-2));color:var(--on-gold);
-  box-shadow:inset 0 0 0 3px rgba(255,255,255,.3),inset 0 0 0 5px var(--gold-2),0 8px 20px rgba(120,85,10,.35)}
-.fab::after{content:"";position:absolute;inset:-3px;border-radius:50%;pointer-events:none;
-  background:repeating-conic-gradient(var(--gold-2) 0 3deg,transparent 3deg 6deg);
-  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px))}
+/* income chips */
+.ichips{display:flex;gap:8px;overflow-x:auto;margin-inline:-18px;padding:2px 18px 4px;scrollbar-width:none}
+.ichips::-webkit-scrollbar{display:none}
+.ichip,.bub.ichip{flex:0 0 auto;flex-direction:row;align-items:center;gap:8px;background:var(--surface-2);border-radius:999px;padding:7px 14px 7px 8px;color:var(--text)}
+.ichip .bub-c,.bub.ichip .bub-c{width:30px;height:30px;font-size:16px;background:var(--surface);box-shadow:none}
+.ichip-n{font-size:13px;font-weight:600}
+.ichip b{font-weight:800;font-size:13px}
+.ichip.zero b{color:var(--faint);font-weight:600}
 
+/* buttons, controls */
+.btn{border-radius:999px;padding:11px 18px;font-weight:700}
+.btn.primary{background:var(--text);color:var(--bg)}
+.btn.ghost{background:var(--surface);border-color:var(--line)}
+.seg{border-radius:999px;padding:4px}
+.seg button{border-radius:999px}
+.seg button[aria-pressed="true"]{background:var(--text);color:var(--bg);box-shadow:none}
+.chip{border-radius:999px}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.inp{border-radius:14px}
+.inp.big{font:800 34px var(--f-disp);letter-spacing:-.04em}
+.pill{border-radius:999px}
+.bar > i{background:var(--text)}
+.ico{border-radius:14px}
+.kpi{border-radius:20px}
+.kpi b{font-weight:800;letter-spacing:-.03em}
+
+/* tab bar + fab */
+.tabbar{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border-radius:30px;border:1px solid var(--line);padding:6px;
+  background:color-mix(in srgb,var(--surface) 82%,transparent);box-shadow:0 8px 30px rgba(13,15,20,.12)}
+.tab{border-radius:24px}
+.tab[aria-current="page"]{color:var(--text);background:var(--surface-2);font-weight:700}
+.fab{bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--text);color:var(--bg);box-shadow:0 10px 24px rgba(13,15,20,.28)}
+.main{padding-block:14px 140px}
 @media (min-width:900px){
   .side{background:var(--surface);border-right:1px solid var(--line)}
-  .side .tab[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
-  .side .add-btn{background:radial-gradient(circle at 30% 20%,#F5DB8C,var(--gold) 55%,var(--gold-2));color:var(--on-gold)}
+  .side .tab[aria-current="page"]{background:var(--text);color:var(--bg)}
+  .main{padding-block:26px 60px}
+  .wcard,.wcard.bub{flex-basis:280px}
 }
-.sheet{border-radius:16px 16px 0 0}
-@media (min-width:700px){.sheet{border-radius:16px}}
-@media (min-width:900px){.hero{background-position:right 20px center,0 0,0 0;background-size:260px 260px,auto,auto}}
+
+/* account sheet: live card preview + card types */
+.skin-prev{display:flex;justify-content:center;padding:4px 0 6px}
+.skin-prev .wcard{flex:0 0 auto;width:min(100%,320px)}
+.skins{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.skin{aspect-ratio:1.586;border:0;border-radius:10px;background:var(--cbg);color:var(--cfg);font-size:11.5px;font-weight:700;padding:6px 8px;display:flex;align-items:flex-end;text-align:left;
+  box-shadow:0 2px 6px rgba(13,15,20,.12);position:relative}
+.skin span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skin[aria-pressed="true"]{outline:3px solid var(--text);outline-offset:2px}
+.skin[aria-pressed="true"]::after{content:"✓";position:absolute;top:5px;right:7px;font-size:13px}
+.sheet{border-radius:26px 26px 0 0}
+@media (min-width:700px){.sheet{border-radius:26px}}
+/* while dragging a card, the floating bar and + step aside so every tile can be reached */
+body.dragging .tabbar,body.dragging .fab{opacity:0;pointer-events:none;transition:opacity .15s}
