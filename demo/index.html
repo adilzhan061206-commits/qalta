@@ -734,6 +734,23 @@ body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
 .fab svg{width:24px;height:24px}
 .main{padding-block:14px 112px}
 @media (min-width:900px){.main{padding-block:26px 60px}}
+
+/* phone tab bar like Apple Music / iOS 26: a compact glass pill sitting low, only the open tab shows its name,
+   and the + is its own glass circle beside it */
+@media (max-width:899px){
+  .tabbar{display:flex;align-items:center;gap:2px;left:14px;right:84px;bottom:max(8px,calc(env(safe-area-inset-bottom,0px) - 14px));height:58px;padding:4px;border-radius:29px;
+    background:color-mix(in srgb,var(--surface) 50%,transparent);-webkit-backdrop-filter:blur(24px) saturate(190%);backdrop-filter:blur(24px) saturate(190%);
+    border:.5px solid color-mix(in srgb,var(--text) 12%,transparent);box-shadow:0 8px 28px rgba(13,15,20,.14)}
+  .tab{flex:1 1 0;min-width:0;height:100%;flex-direction:row;justify-content:center;gap:6px;padding:0 6px;border-radius:25px;font-size:13px;font-weight:700;color:var(--muted)}
+  .tab span{display:none}
+  .tab svg{width:23px;height:23px}
+  .tab[aria-current="page"]{flex:2.4 1 0;background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--text);box-shadow:0 1px 6px rgba(13,15,20,.10)}
+  .tab[aria-current="page"] span{display:inline;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fab{right:14px;bottom:max(8px,calc(env(safe-area-inset-bottom,0px) - 14px));width:58px;height:58px;
+    background:color-mix(in srgb,var(--text) 88%,transparent);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);box-shadow:0 8px 24px rgba(13,15,20,.25)}
+  .fab svg{width:26px;height:26px}
+  .main{padding-block:14px 96px}
+}
 </style>
 </head>
 <body>
