@@ -1028,7 +1028,13 @@ async function pullInbox(){
       const id = "ap-" + r.id;
       if (have.has(id)) continue;
       const when = new Date(r.created_at), date = dstr(when), k = mkey(date);
-      S.months[k] = (S.months[k] || []).concat([{id, t: "exp", a: +r.amount, c: guessCat(r.merchant), acc: guessAcc(r.card), date, n: (r.merchant || "").trim(), ts: when.getTime(), ap: 1}]);
+      // iPhone can glue the card name onto the merchant ("Ip NangoKaspi Gold"): split it off by account names
+      let merchant = (r.merchant || "").trim(), card = (r.card || "").trim();
+      if (!card && merchant) {
+        const hit = S.settings.accounts.map(a => a.name).filter(n => n && merchant.length > n.length && merchant.toLowerCase().endsWith(n.toLowerCase())).sort((a, b) => b.length - a.length)[0];
+        if (hit) { card = hit; merchant = merchant.slice(0, -hit.length).trim(); }
+      }
+      S.months[k] = (S.months[k] || []).concat([{id, t: "exp", a: +r.amount, c: guessCat(merchant), acc: guessAcc(card), date, n: merchant, ts: when.getTime(), ap: 1}]);
       persistMonth(k); n++;
     }
     if (n) { bump(); render(); toast(`Apple Pay: ${n} төлем жазылды`); }

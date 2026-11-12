@@ -69,17 +69,25 @@ create policy "own inbox delete" on public.qalta_inbox for delete to authenticat
 -- Сома iPhone-нан мәтін болып келеді: "1 250,50 ₸", "₸1 250", "1,250.50" — бәрін санға айналдырамыз
 create or replace function public.qalta_pay(token text, amount text, merchant text default '', card text default '')
 returns text language plpgsql security definer set search_path = public as $$
-declare uid uuid; s text; v numeric;
+declare uid uuid; m text; s text; v numeric; rest text;
 begin
   select t.user_id into uid from public.qalta_tokens t where t.token = qalta_pay.token;
   if uid is null then raise exception 'Қалта: кілт дұрыс емес'; end if;
-  s := regexp_replace(coalesce(amount, ''), '[^0-9,.]', '', 'g');
+  -- iPhone sometimes puts Amount, Merchant and Card into one field ("₸1 400,00Ip NangoKaspi Gold"):
+  -- the first number is the amount, the text left over becomes the merchant.
+  m := substring(coalesce(amount, '') from '[0-9][0-9 \u00a0\u202f.,]*[0-9]|[0-9]');
+  s := regexp_replace(coalesce(m, ''), '[^0-9,.]', '', 'g');
   if position(',' in s) > 0 and position('.' in s) > 0 then
     if position(',' in s) < position('.' in s) then s := replace(s, ',', ''); else s := replace(replace(s, '.', ''), ',', '.'); end if;
-  else s := replace(s, ',', '.'); end if;
+  elsif s ~ ',[0-9]{1,2}$' then s := replace(s, ',', '.');
+  elsif s ~ '\.[0-9]{3}$' then s := replace(s, '.', '');
+  else s := replace(s, ',', '');
+  end if;
   v := nullif(s, '')::numeric;
   if v is null or v <= 0 then raise exception 'Қалта: сома танылмады (%)', amount; end if;
-  insert into public.qalta_inbox (user_id, amount, merchant, card, raw) values (uid, v, left(merchant, 80), left(card, 60), left(amount, 40));
+  rest := btrim(regexp_replace(replace(coalesce(amount, ''), coalesce(m, ''), ''), '[₸$€₽£¥]|\m(KZT|USD|EUR|RUB)\M', '', 'g'));
+  if coalesce(btrim(merchant), '') = '' and rest <> '' then merchant := rest; end if;
+  insert into public.qalta_inbox (user_id, amount, merchant, card, raw) values (uid, v, left(merchant, 80), left(card, 60), left(amount, 80));
   return 'ok';
 end $$;
 revoke all on function public.qalta_pay(text, text, text, text) from public;
