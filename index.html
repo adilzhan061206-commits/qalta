@@ -800,6 +800,12 @@ html{touch-action:manipulation}
   .tab.pressed svg,.tab.pressed span{transform:scale(.92)}
   .tab.aim svg{transform:none}
 }
+
+@media (max-width:899px){
+  .tab-lens{transition:none!important;transform-origin:50% 50%;will-change:transform}
+  .tab-lens::before{transition:opacity .3s ease}
+  .tab-lens.moving::before{opacity:.55}
+}
 </style>
 </head>
 <body>
@@ -1394,22 +1400,33 @@ function goTab(t){
   ui.tab = t; ui.sub = null; closeSheet();
   $$("#tabbar .tab").forEach(b => { if (b.dataset.tab === t) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
   moveLens();
-  requestAnimationFrame(() => { render(); window.scrollTo(0, 0); });
+  requestAnimationFrame(() => requestAnimationFrame(() => { render(); window.scrollTo(0, 0); }));
 }
 /* ---------- glass lens under the current tab (phone) ---------- */
 let lensAt = null, lensDrag = null;
 function lensBox(tab){ const bar = $("#tabbar"); return {x: tab.offsetLeft, w: tab.offsetWidth, bar}; }
 function placeLens(x, w, animate){
   const lens = $("#tabbar .tab-lens"); if (!lens) return;
-  lens.classList.toggle("no-anim", !animate);
+  const from = new DOMMatrix(getComputedStyle(lens).transform).m41;   // where it is right now, even mid-flight
+  lens.getAnimations().forEach(a => a.cancel());
   lens.style.width = w + "px"; lens.style.transform = `translateX(${x}px)`;
+  const dist = Math.abs(x - from);
+  if (!animate || dist < 1 || !lens.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  // a drop of liquid glass: it stretches toward where it's going and squeezes a little, then rounds off
+  const sx = 1 + Math.min(0.42, dist / 260), sy = 1 - Math.min(0.12, dist / 900), dir = x > from ? 1 : -1;
+  lens.animate([
+    {transform: `translateX(${from}px) scale(1,1)`},
+    {transform: `translateX(${from + (x - from) * 0.55 + dir * 4}px) scale(${sx},${sy})`, offset: 0.45},
+    {transform: `translateX(${x}px) scale(1.02,0.99)`, offset: 0.82},
+    {transform: `translateX(${x}px) scale(1,1)`}
+  ], {duration: Math.round(320 + Math.min(180, dist * 0.7)), easing: "cubic-bezier(.32,.72,0,1)"});
 }
 function moveLens(){
   const tab = $(`#tabbar .tab[data-tab="${ui.tab}"]`); if (!tab || !tab.offsetWidth) return;
   const {x, w} = lensBox(tab), first = lensAt === null, moved = !first && lensAt !== ui.tab;
   placeLens(x, w, !first);
   const lens = $("#tabbar .tab-lens");
-  if (moved && lens && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) { lens.classList.add("moving"); clearTimeout(moveLens.t); moveLens.t = setTimeout(() => lens.classList.remove("moving"), 260); }
+  if (moved && lens && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) { lens.classList.add("moving"); clearTimeout(moveLens.t); moveLens.t = setTimeout(() => lens.classList.remove("moving"), 420); }
   lensAt = ui.tab;
 }
 addEventListener("resize", () => { lensAt = null; moveLens(); });

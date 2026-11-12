@@ -435,3 +435,9 @@ html{touch-action:manipulation}
   .tab.pressed svg,.tab.pressed span{transform:scale(.92)}
   .tab.aim svg{transform:none}
 }
+
+@media (max-width:899px){
+  .tab-lens{transition:none!important;transform-origin:50% 50%;will-change:transform}
+  .tab-lens::before{transition:opacity .3s ease}
+  .tab-lens.moving::before{opacity:.55}
+}
