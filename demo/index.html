@@ -2969,7 +2969,18 @@ window.addEventListener("scroll", () => { tip.hidden = true; }, {passive: true})
 let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(render, 200); });
 
 boot();
-if (false && "serviceWorker" in navigator && location.protocol === "https:") window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+// Updates: a Home Screen app on iPhone can stay open for days without reloading. Each time it comes back
+// to the screen, ask for a newer service worker; when one takes over, reload once so the new version shows.
+if (false && "serviceWorker" in navigator && location.protocol === "https:") {
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloaded) { reloaded = true; location.reload(); } });
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js", {updateViaCache: "none"}).then(reg => {
+    const check = () => reg.update().catch(() => {});
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") check(); });
+    setInterval(check, 30 * 60 * 1000);
+  }).catch(() => {}));
+}
 })();
 </script>
 </body>

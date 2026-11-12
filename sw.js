@@ -1,6 +1,6 @@
 // Қалта service worker: қосымшаны интернетсіз ашу үшін файлдарды кэштейді.
 // Жаңа нұсқа шығарғанда VERSION-ды өзгертіңіз.
-const VERSION = "qalta-v33";
+const VERSION = "qalta-v34";
 const CORE = [
   "./",
   "./index.html",
@@ -37,7 +37,7 @@ self.addEventListener("fetch", e => {
   // Беттің өзі: алдымен желі (жаңа нұсқа үшін), болмаса кэш
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req)
+      fetch(req.url, {cache: "no-cache", credentials: "same-origin"})   // skip the browser's 10-minute page cache
         .then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })
         .catch(() => caches.match(req).then(hit => hit || caches.match("./index.html")))
     );
