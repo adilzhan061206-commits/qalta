@@ -31,6 +31,34 @@ Deno.serve(async (req) => {
 
   webpush.setVapidDetails("https://adilzhan061206-commits.github.io/qalta/", await secret("qalta_vapid_public"), await secret("qalta_vapid_private"));
 
+  // a payment just arrived from Apple Pay (database trigger on qalta_inbox): ask which category it was
+  if (body && body.pay) {
+    const p = body.pay;
+    const { data: subs } = await sb.from("qalta_push").select("*").eq("user_id", p.user_id);
+    let merchant = String(p.merchant || "").trim();
+    const { data: st } = await sb.from("qalta_docs").select("data").eq("user_id", p.user_id).eq("path", "settings").maybeSingle();
+    const names: string[] = ((st && st.data && st.data.accounts) || []).map((a: any) => String(a.name || "")).filter(Boolean).sort((a: string, b: string) => b.length - a.length);
+    const hit = names.find(n => merchant.length > n.length && merchant.toLowerCase().endsWith(n.toLowerCase()));
+    if (hit) merchant = merchant.slice(0, -hit.length).trim();
+    // a merchant the person already categorised is filed automatically by the app — no need to ask
+    if (merchant) {
+      const ym = new Date().toISOString().slice(0, 7), pm = shiftDays(ym + "-01", -1).slice(0, 7);
+      const { data: docs } = await sb.from("qalta_docs").select("data").eq("user_id", p.user_id).in("path", ["m/" + ym, "m/" + pm]);
+      const m = merchant.toLowerCase();
+      const known = (docs || []).some(d => ((d.data && d.data.items) || []).some((t: any) => t && t.t === "exp" && !t.ask && String(t.n || "").trim().toLowerCase() === m));
+      if (known) return new Response(JSON.stringify({ pay: true, known: true }), { headers: { "Content-Type": "application/json" } });
+    }
+    const amt = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(Math.round(+p.amount)) + " ₸";
+    const ask: Record<string, string> = { kk: "қай санатқа жазайын?", ru: "в какую категорию записать?", en: "which category is it?" };
+    const res: unknown[] = [];
+    for (const s of subs || []) {
+      const payload = JSON.stringify({ title: "Қалта · Apple Pay", body: `${amt}${merchant ? " · " + merchant : ""} — ${ask[s.lang] || ask.kk}`, url: "./?review=1", tag: "qalta-pay" });
+      try { await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 3600, urgency: "high" }); res.push({ sent: true }); }
+      catch (e: any) { const code = e && e.statusCode; if (code === 404 || code === 410) await sb.from("qalta_push").delete().eq("endpoint", s.endpoint); res.push({ sent: false, code }); }
+    }
+    return new Response(JSON.stringify({ pay: true, results: res }), { headers: { "Content-Type": "application/json" } });
+  }
+
   const now = Date.now();
   let q = sb.from("qalta_push").select("*");
   if (force) q = q.eq("endpoint", force);

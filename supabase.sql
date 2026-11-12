@@ -133,3 +133,20 @@ grant execute on function public.qalta_push_secret(text) to service_role;
 --   url := 'https://<project>.supabase.co/functions/v1/qalta-remind',
 --   headers := jsonb_build_object('Content-Type','application/json','x-qalta-cron', public.qalta_push_secret('qalta_cron_secret')),
 --   body := '{}'::jsonb, timeout_milliseconds := 30000) $job$);
+
+-- Apple Pay төлемі түскенде пуш арқылы «қай санат?» деп сұрау (жаңа дүкендер үшін ғана; qalta-remind функциясы шешеді)
+create or replace function public.qalta_inbox_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  perform net.http_post(
+    url := 'https://rjzuvckvcgysofksznjo.supabase.co/functions/v1/qalta-remind',
+    headers := jsonb_build_object('Content-Type','application/json','x-qalta-cron', public.qalta_push_secret('qalta_cron_secret')),
+    body := jsonb_build_object('pay', jsonb_build_object('user_id', new.user_id, 'amount', new.amount, 'merchant', new.merchant)),
+    timeout_milliseconds := 20000);
+  return new;
+exception when others then
+  return new;
+end $$;
+revoke all on function public.qalta_inbox_notify() from public, anon, authenticated;
+drop trigger if exists qalta_inbox_notify on public.qalta_inbox;
+create trigger qalta_inbox_notify after insert on public.qalta_inbox for each row execute function public.qalta_inbox_notify();
