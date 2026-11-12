@@ -684,6 +684,40 @@ body.dragging .tile-inc.dragging{opacity:.35}
 .rc-foot span:last-child{color:var(--text)}
 .tile-v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:15px}
 
+/* ===== round 6: money flows top-down — income → cards → expenses, all compact ===== */
+.h2-inc .tiles,.h2-exp .tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (min-width:640px){.h2-inc .tiles,.h2-exp .tiles{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.h2-inc .tile,.h2-exp .tile,.h2-inc .bub.tile,.h2-exp .bub.tile{padding:9px 8px;border-radius:13px;gap:2px}
+.h2-inc .tile .bub-c,.h2-exp .tile .bub-c{font-size:18px}
+.h2-inc .tile-n,.h2-exp .tile-n{font-size:10.5px}
+.h2-inc .tile-v,.h2-exp .tile-v{font-size:12.5px}
+.h2-inc .tile .bar,.h2-exp .tile .bar{height:4px}
+.h2-inc,.h2-exp{padding:14px}
+.home2{gap:12px}
+
+/* drop dock: the targets slide up to the finger */
+.drop-dock{position:fixed;left:0;right:0;bottom:0;z-index:79;background:var(--surface);border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 40px rgba(13,15,20,.22);padding:14px 14px calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:8px;max-height:62vh;overflow:hidden;animation:dkUp .18s ease-out}
+@keyframes dkUp{from{transform:translateY(40%);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.drop-dock{animation:none}}
+.dk-t{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-left:2px}
+.dk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (min-width:640px){.dk-grid{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.dk-cat,.bub.dk-cat{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;background:var(--surface-2);font-size:11px;font-weight:600;color:var(--text);text-align:center;min-width:0}
+.dk-cat span:last-child{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dk-cat .bub-c,.bub.dk-cat .bub-c{width:auto;height:auto;background:none;box-shadow:none;font-size:22px}
+.dk-row{display:flex;gap:8px;flex-wrap:wrap}
+.dk-acc,.bub.dk-acc{flex-direction:row;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:var(--cbg);color:var(--cfg);font-weight:700;font-size:13px}
+.dk-acc .bub-c,.bub.dk-acc .bub-c{width:auto;height:auto;background:none;box-shadow:none;font-size:16px}
+body.dragging .drop-dock .target{outline:0}
+body.dragging .drop-dock .drop-ok{outline:3px solid var(--text);outline-offset:1px;transform:scale(1.06)}
+body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
+.drag-ghost{z-index:85}
+.wallet .wcard,.wallet .wcard.bub{aspect-ratio:1.8}
+.wallet .wadd{aspect-ratio:auto;min-height:56px}
+.wallet .wc-mid{display:none}
+
 </style>
 </head>
 <body>
@@ -1428,6 +1462,8 @@ function openRecap(k){
 }
 function closeRecap(){ const el = document.querySelector(".story"); if (el) el.remove(); }
 function vHome2(){
+  // short amounts for the small tiles: 380 мың, 1,2 млн
+  const short = n => n >= 1e6 ? String(Math.round(n / 1e5) / 10).replace(".", ",") + " млн" : n >= 1e5 ? Math.round(n / 1e3) + " мың" : fmt(n);
   const k = curMonth(), st = monthStats(k), bal = balances(), total = totalBalance();
   const dim = daysIn(k), day = new Date().getDate(), left = dim - day + 1;
   const free = st.inc - st.exp - Math.max(0, st.sav);
@@ -1440,9 +1476,9 @@ function vHome2(){
   const tiles = byVal(expCats, c => st.byCat[c.id] || 0).map(c => {
     const v = st.byCat[c.id] || 0, lim = S.settings.budgets[c.id], p = lim ? Math.min(100, v / lim * 100) : 0;
     const cls = lim && v > lim ? "over" : p > 80 ? "warn" : "ok";
-    return `<button class="bub exp tile${v ? "" : " zero"}" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="tile-n">${esc(c.name)}</span><b class="tile-v num">${fmt(v)}</b>${lim ? `<span class="bar"><i class="${cls}" style="width:${p}%"></i></span>` : ""}</button>`;
+    return `<button class="bub exp tile${v ? "" : " zero"}" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="tile-n">${esc(c.name)}</span><b class="tile-v num">${short(v)}</b>${lim ? `<span class="bar"><i class="${cls}" style="width:${p}%"></i></span>` : ""}</button>`;
   }).join("") + `<button class="tile tile-add" data-act="editCat" data-type="exp"><span class="bub-c">+</span><span class="tile-n">Санат қосу</span></button>`;
-  const incTiles = byVal(incCats, c => incBy[c.id] || 0).map(c => `<button class="bub inc tile tile-inc${incBy[c.id] ? "" : " zero"}" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="tile-n">${esc(c.name)}</span><b class="tile-v num">${incBy[c.id] ? "+" + fmt(incBy[c.id]) : fmt(0)}</b></button>`).join("")
+  const incTiles = byVal(incCats, c => incBy[c.id] || 0).map(c => `<button class="bub inc tile tile-inc${incBy[c.id] ? "" : " zero"}" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="tile-n">${esc(c.name)}</span><b class="tile-v num">${incBy[c.id] ? "+" + short(incBy[c.id]) : fmt(0)}</b></button>`).join("")
     + `<button class="tile tile-add" data-act="editCat" data-type="inc"><span class="bub-c">+</span><span class="tile-n">Санат қосу</span></button>`;
   const qa = (ic, label, attrs) => `<button class="qa" ${attrs}><span class="qa-c">${ic}</span><span class="qa-l">${label}</span></button>`;
   const spentP = st.inc > 0 ? Math.min(100, st.exp / st.inc * 100) : (st.exp ? 100 : 0);
@@ -1455,9 +1491,9 @@ function vHome2(){
     ${reviewCard()}
     <section class="h2-total"><div class="h2-head"><span class="h2-lbl">Барлық шоттарда</span>${(() => { const si = streakInfo(); return `<button class="streak${si.todayDone ? " done" : ""}" data-act="streakTip">🔥 ${si.n} ${tri("күн", "дн.", si.n === 1 ? "day" : "days")}</button>`; })()}</div><div class="h2-big num">${fmt(total)}</div><div class="h2-day">${dayLine}</div></section>
     <div class="qas">${qa(I2.minus, "Шығын", `data-act="newTx" data-type="exp"`)}${qa(I2.plus, "Кіріс", `data-act="newTx" data-type="inc"`)}${qa(I2.swap, "Аударым", `data-act="newTx" data-type="tr"`)}${qa(I2.jar, "Жинақ", `data-act="tab" data-tab="goals"`)}</div>
+    <section class="card section h2-inc"><div class="sec-h"><h2>Кірістер</h2><span class="small muted num">+${fmt(st.inc)}</span></div><div class="tiles">${incTiles}</div></section>
     <div class="wallet" role="list">${cards}</div>
-    <section class="card section"><div class="sec-h"><h2>Кірістер</h2><span class="small muted num">+${fmt(st.inc)}</span></div><div class="tiles">${incTiles}</div><p class="drag-hint">Басыңыз — кіріс енгізіледі. Картаға сүйресеңіз — ақша сол картаға түседі.</p></section>
-    <section class="card section"><div class="sec-h"><h2>Шығындар</h2><button class="link" data-act="newSplit">👥 Счет бөлу</button></div><div class="tiles">${tiles}</div><p class="drag-hint">Картаны ұстап, санатқа сүйреңіз — шығын жазылады. Кірісті картаға сүйресеңіз — табыс, картаны картаға — аударым.</p></section>
+    <section class="card section h2-exp"><div class="sec-h"><h2>Шығындар</h2><button class="link" data-act="newSplit">👥 Счет бөлу</button></div><div class="tiles">${tiles}</div><p class="drag-hint">Картаны ұстап сәл қозғалтыңыз — санаттар төменнен шығады, керегіне апарыңыз.</p></section>
     ${(() => { const rk = day <= 7 ? shiftMonth(k, -1) : k, rs = monthStats(rk);
       const icons = Object.entries(rs.byCat).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c]) => esc((cat(c) || {}).icon || "")).join(" ");
       return `<button class="recap-cta receipt" data-act="recap" data-k="${rk}"><span class="rc-mono">${MONTHS[+rk.slice(5) - 1].toUpperCase()} · ${tri("ҚОРЫТЫНДЫ", "ИТОГИ", "RECAP")}</span><span class="rc-row"><b class="num">${fmt(rs.exp)}</b><span class="rc-ic">${icons}</span></span><span class="rc-dash"></span><span class="rc-foot"><span>${tri("6 слайд", "6 слайдов", "6 slides")}</span><span>${tri("Ашу", "Открыть", "Open")} ›</span></span></button>`; })()}
@@ -2442,6 +2478,18 @@ function toggleSplitDebt(sp, dId){
 
 /* ---------- drag & drop (Budget OK style) ---------- */
 let drag = null, suppressClick = false;
+
+/* while a card / income is dragged (UI2), a panel of targets slides up near the finger */
+function showDock(kind, fromId){
+  hideDock();
+  const cats = S.settings.cats.filter(c => c.type === "exp"), accs = S.settings.accounts.filter(a => a.id !== fromId);
+  const accChip = a => { const sk = skinOf(a); return `<div class="bub acc dk-acc" data-kind="acc" data-id="${esc(a.id)}" style="--cbg:${sk.bg};--cfg:${sk.fg}"><span class="bub-c">${esc(a.icon || "💳")}</span><span>${esc(a.name)}</span></div>`; };
+  let html;
+  if (kind === "acc") html = `<div class="dk-t">${tri("Қай санатқа?", "В какую категорию?", "Which category?")}</div><div class="dk-grid">${cats.map(c => `<div class="bub exp dk-cat" data-kind="exp" data-id="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span>${esc(c.name)}</span></div>`).join("")}</div>${accs.length ? `<div class="dk-t">${tri("Басқа картаға — аударым", "На другую карту — перевод", "To another card — transfer")}</div><div class="dk-row">${accs.map(accChip).join("")}</div>` : ""}`;
+  else html = `<div class="dk-t">${tri("Қай картаға түсті?", "На какую карту?", "Which card?")}</div><div class="dk-row">${S.settings.accounts.map(accChip).join("")}</div>`;
+  const d = document.createElement("div"); d.className = "drop-dock"; d.innerHTML = html; document.body.appendChild(d);
+}
+function hideDock(){ const d = document.querySelector(".drop-dock"); if (d) d.remove(); }
 function dropTargets(kind){ return kind === "inc" ? ".bub.acc[data-kind]" : kind === "acc" ? ".bub.acc[data-kind], .bub.exp" : null; }
 document.addEventListener("pointerdown", e => {
   const b = e.target.closest && e.target.closest(".bub[data-drag]");
@@ -2457,6 +2505,7 @@ document.addEventListener("pointermove", e => {
     drag.started = true;
     const g = document.createElement("div"); g.className = "drag-ghost"; g.textContent = drag.el.querySelector(".bub-c").textContent; document.body.appendChild(g); drag.ghost = g;
     drag.el.classList.add("dragging"); document.body.classList.add("dragging");
+    if (UI2) showDock(drag.kind, drag.id);
     $$(dropTargets(drag.kind)).forEach(t => { if (t !== drag.el) t.classList.add("target"); });
   }
   e.preventDefault();
@@ -2470,7 +2519,7 @@ document.addEventListener("pointermove", e => {
 function endDrag(apply){
   const d = drag; drag = null; if (!d || !d.started) return;
   suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
-  d.ghost.remove(); d.el.classList.remove("dragging"); document.body.classList.remove("dragging");
+  d.ghost.remove(); d.el.classList.remove("dragging"); document.body.classList.remove("dragging"); hideDock();
   $$(".bub.target").forEach(t => t.classList.remove("target", "drop-ok"));
   if (!apply || !d.target) return;
   const to = d.target.dataset.id, tk = d.target.dataset.kind;

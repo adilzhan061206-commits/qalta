@@ -319,3 +319,37 @@ body.dragging .tile-inc.dragging{opacity:.35}
 .rc-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em}
 .rc-foot span:last-child{color:var(--text)}
 .tile-v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-size:15px}
+
+/* ===== round 6: money flows top-down — income → cards → expenses, all compact ===== */
+.h2-inc .tiles,.h2-exp .tiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (min-width:640px){.h2-inc .tiles,.h2-exp .tiles{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.h2-inc .tile,.h2-exp .tile,.h2-inc .bub.tile,.h2-exp .bub.tile{padding:9px 8px;border-radius:13px;gap:2px}
+.h2-inc .tile .bub-c,.h2-exp .tile .bub-c{font-size:18px}
+.h2-inc .tile-n,.h2-exp .tile-n{font-size:10.5px}
+.h2-inc .tile-v,.h2-exp .tile-v{font-size:12.5px}
+.h2-inc .tile .bar,.h2-exp .tile .bar{height:4px}
+.h2-inc,.h2-exp{padding:14px}
+.home2{gap:12px}
+
+/* drop dock: the targets slide up to the finger */
+.drop-dock{position:fixed;left:0;right:0;bottom:0;z-index:79;background:var(--surface);border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 40px rgba(13,15,20,.22);padding:14px 14px calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:8px;max-height:62vh;overflow:hidden;animation:dkUp .18s ease-out}
+@keyframes dkUp{from{transform:translateY(40%);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.drop-dock{animation:none}}
+.dk-t{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-left:2px}
+.dk-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+@media (min-width:640px){.dk-grid{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.dk-cat,.bub.dk-cat{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;background:var(--surface-2);font-size:11px;font-weight:600;color:var(--text);text-align:center;min-width:0}
+.dk-cat span:last-child{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dk-cat .bub-c,.bub.dk-cat .bub-c{width:auto;height:auto;background:none;box-shadow:none;font-size:22px}
+.dk-row{display:flex;gap:8px;flex-wrap:wrap}
+.dk-acc,.bub.dk-acc{flex-direction:row;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;background:var(--cbg);color:var(--cfg);font-weight:700;font-size:13px}
+.dk-acc .bub-c,.bub.dk-acc .bub-c{width:auto;height:auto;background:none;box-shadow:none;font-size:16px}
+body.dragging .drop-dock .target{outline:0}
+body.dragging .drop-dock .drop-ok{outline:3px solid var(--text);outline-offset:1px;transform:scale(1.06)}
+body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
+.drag-ghost{z-index:85}
+.wallet .wcard,.wallet .wcard.bub{aspect-ratio:1.8}
+.wallet .wadd{aspect-ratio:auto;min-height:56px}
+.wallet .wc-mid{display:none}
