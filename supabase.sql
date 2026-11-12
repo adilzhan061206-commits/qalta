@@ -90,3 +90,38 @@ begin
   alter publication supabase_realtime add table public.qalta_inbox;
 exception when duplicate_object then null;
 end $$;
+
+-- ============================================================
+-- Күнделікті еске салу (Web Push). Сервер жағы: Supabase Edge Function
+-- «qalta-remind» (сағат сайын pg_cron шақырады), VAPID кілттері мен
+-- cron құпиясы Vault-та: qalta_vapid_public, qalta_vapid_private, qalta_cron_secret.
+-- ============================================================
+create extension if not exists pg_net;
+create extension if not exists pg_cron;
+create table if not exists public.qalta_push (
+  endpoint   text primary key,
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  p256dh     text not null,
+  auth       text not null,
+  hour       int  not null default 20 check (hour between 0 and 23),
+  tz_min     int  not null default 300,
+  lang       text not null default 'kk',
+  last_sent  date,
+  created_at timestamptz not null default now()
+);
+grant select, insert, update, delete on public.qalta_push to authenticated;
+revoke all on public.qalta_push from anon;
+alter table public.qalta_push enable row level security;
+drop policy if exists "own push" on public.qalta_push;
+create policy "own push" on public.qalta_push for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create or replace function public.qalta_push_secret(secret_name text)
+returns text language sql security definer set search_path = public, vault as $$
+  select decrypted_secret from vault.decrypted_secrets where name = secret_name and name like 'qalta_%' limit 1
+$$;
+revoke all on function public.qalta_push_secret(text) from public, anon, authenticated;
+grant execute on function public.qalta_push_secret(text) to service_role;
+-- cron (бір рет):
+-- select cron.schedule('qalta-remind', '0 * * * *', $job$ select net.http_post(
+--   url := 'https://<project>.supabase.co/functions/v1/qalta-remind',
+--   headers := jsonb_build_object('Content-Type','application/json','x-qalta-cron', public.qalta_push_secret('qalta_cron_secret')),
+--   body := '{}'::jsonb, timeout_milliseconds := 30000) $job$);
