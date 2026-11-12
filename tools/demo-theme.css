@@ -416,3 +416,13 @@ html{touch-action:manipulation}
 @media (max-width:899px) and (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tab-lens{background:color-mix(in srgb,#fff 14%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 10px rgba(0,0,0,.4)}}
 @media (max-width:899px){:root[data-theme="dark"] .tab-lens{background:color-mix(in srgb,#fff 14%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 10px rgba(0,0,0,.4)}}
 @media (min-width:900px){.tab-lens{display:none}}
+
+@media (max-width:899px){
+  .tab-lens{transition:transform .3s cubic-bezier(.25,1.2,.5,1),width .25s ease,scale .2s ease}
+  .tab-lens.moving{scale:1.08 1.06}
+  .tab-lens.moving::before{opacity:.75}
+  .tab svg,.tab span{transition:transform .12s ease}
+  .tab.pressed svg,.tab.pressed span{transform:scale(.88)}
+  .tab.aim{opacity:1}
+  .tab.aim svg{transform:scale(1.12)}
+}

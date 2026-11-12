@@ -781,6 +781,16 @@ html{touch-action:manipulation}
 @media (max-width:899px) and (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tab-lens{background:color-mix(in srgb,#fff 14%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 10px rgba(0,0,0,.4)}}
 @media (max-width:899px){:root[data-theme="dark"] .tab-lens{background:color-mix(in srgb,#fff 14%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 10px rgba(0,0,0,.4)}}
 @media (min-width:900px){.tab-lens{display:none}}
+
+@media (max-width:899px){
+  .tab-lens{transition:transform .3s cubic-bezier(.25,1.2,.5,1),width .25s ease,scale .2s ease}
+  .tab-lens.moving{scale:1.08 1.06}
+  .tab-lens.moving::before{opacity:.75}
+  .tab svg,.tab span{transition:transform .12s ease}
+  .tab.pressed svg,.tab.pressed span{transform:scale(.88)}
+  .tab.aim{opacity:1}
+  .tab.aim svg{transform:scale(1.12)}
+}
 </style>
 </head>
 <body>
@@ -1367,6 +1377,15 @@ function syncHTML(){
   return `<span class="sync ${cls}" id="sync" title="Деректер қайда сақталады"><i></i>${txt}</span>`;
 }
 
+
+// open a tab: the bar answers at once (lens starts moving), the page is drawn on the next frame
+function goTab(t){
+  if (t === ui.tab && !ui.sub) { window.scrollTo({top: 0, behavior: "smooth"}); return; }
+  ui.tab = t; ui.sub = null; closeSheet();
+  $$("#tabbar .tab").forEach(b => { if (b.dataset.tab === t) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  moveLens();
+  requestAnimationFrame(() => { render(); window.scrollTo(0, 0); });
+}
 /* ---------- glass lens under the current tab (phone) ---------- */
 let lensAt = null, lensDrag = null;
 function lensBox(tab){ const bar = $("#tabbar"); return {x: tab.offsetLeft, w: tab.offsetWidth, bar}; }
@@ -1380,31 +1399,36 @@ function moveLens(){
   const {x, w} = lensBox(tab), first = lensAt === null, moved = !first && lensAt !== ui.tab;
   placeLens(x, w, !first);
   const lens = $("#tabbar .tab-lens");
-  if (moved && lens && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) { lens.classList.remove("moving"); void lens.offsetWidth; lens.classList.add("moving"); clearTimeout(moveLens.t); moveLens.t = setTimeout(() => lens.classList.remove("moving"), 520); }
+  if (moved && lens && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) { lens.classList.remove("moving"); void lens.offsetWidth; lens.classList.add("moving"); clearTimeout(moveLens.t); moveLens.t = setTimeout(() => lens.classList.remove("moving"), 300); }
   lensAt = ui.tab;
 }
 addEventListener("resize", () => { lensAt = null; moveLens(); });
 // press and slide along the bar, like iOS: the lens follows the finger, letting go opens that tab
+function nearestTab(x){ return [...$$("#tabbar .tab")].map(t => ({t, r: t.getBoundingClientRect()})).sort((a, b) => Math.abs(a.r.left + a.r.width / 2 - x) - Math.abs(b.r.left + b.r.width / 2 - x))[0]; }
 document.addEventListener("pointerdown", e => {
   const bar = e.target.closest && e.target.closest("#tabbar"); if (!bar || window.innerWidth >= 900) return;
-  lensDrag = {x0: e.clientX, pid: e.pointerId, on: false};
+  const t = e.target.closest(".tab"); if (t) t.classList.add("pressed");
+  lensDrag = {x0: e.clientX, y0: e.clientY, pid: e.pointerId, on: false};
 });
+const unpress = () => $$("#tabbar .tab.pressed, #tabbar .tab.aim").forEach(b => b.classList.remove("pressed", "aim"));
 document.addEventListener("pointermove", e => {
   if (!lensDrag || e.pointerId !== lensDrag.pid) return;
-  if (!lensDrag.on && Math.abs(e.clientX - lensDrag.x0) < 8) return;
+  const dx = Math.abs(e.clientX - lensDrag.x0), dy = Math.abs(e.clientY - lensDrag.y0);
+  if (!lensDrag.on && (dx < 16 || dx < dy * 1.5)) return;   // a tap with a wobbly finger stays a tap
+  unpress(); const aim = nearestTab(e.clientX); if (aim) aim.t.classList.add("aim");
   const bar = $("#tabbar"), lens = $("#tabbar .tab-lens"), cur = $("#tabbar .tab[aria-current]"); if (!bar || !lens || !cur) return;
   lensDrag.on = true; lens.classList.add("moving", "held");
   const r = bar.getBoundingClientRect(), w = cur.offsetWidth;
   placeLens(Math.max(4, Math.min(r.width - w - 4, e.clientX - r.left - w / 2)), w, false);
 });
 document.addEventListener("pointerup", e => {
-  const d = lensDrag; lensDrag = null; if (!d || !d.on) return;
+  const d = lensDrag; lensDrag = null; unpress(); if (!d || !d.on) return;
   const lens = $("#tabbar .tab-lens"); if (lens) lens.classList.remove("moving", "held");
-  const hit = [...$$("#tabbar .tab")].map(t => ({t, r: t.getBoundingClientRect()})).sort((a, b) => Math.abs(a.r.left + a.r.width / 2 - e.clientX) - Math.abs(b.r.left + b.r.width / 2 - e.clientX))[0];
+  const hit = nearestTab(e.clientX);
   suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
-  if (hit && hit.t.dataset.tab !== ui.tab) { ui.tab = hit.t.dataset.tab; ui.sub = null; closeSheet(); render(); window.scrollTo(0, 0); } else moveLens();
+  if (hit && hit.t.dataset.tab !== ui.tab) goTab(hit.t.dataset.tab); else moveLens();
 });
-document.addEventListener("pointercancel", () => { if (lensDrag && lensDrag.on) { lensDrag = null; const l = $("#tabbar .tab-lens"); if (l) l.classList.remove("moving", "held"); moveLens(); } else lensDrag = null; });
+document.addEventListener("pointercancel", () => { unpress(); if (lensDrag && lensDrag.on) { lensDrag = null; const l = $("#tabbar .tab-lens"); if (l) l.classList.remove("moving", "held"); moveLens(); } else lensDrag = null; });
 function render(){
   const authOn = mode === "auth";
   $("#tabbar").hidden = authOn; $("#fab").hidden = authOn; $("#side").hidden = authOn;
@@ -3002,7 +3026,7 @@ function exitDemo(){ if (mode !== "demo" || !saved) return; S.settings = saved.s
 
 /* ---------- events ---------- */
 const ACT = {
-  tab: el => { ui.tab = el.dataset.tab; ui.sub = null; closeSheet(); render(); window.scrollTo(0, 0); },
+  tab: el => goTab(el.dataset.tab),
   newTx: el => openTx(null, el.dataset.type, el.dataset.c ? {c: el.dataset.c} : null),
   newSplit: () => openSplit(),
   anView: el => { ui.anView = el.dataset.v; render(); window.scrollTo(0, 0); },
