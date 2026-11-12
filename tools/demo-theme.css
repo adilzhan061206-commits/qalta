@@ -156,3 +156,48 @@ body.dragging .bub.tile .bub-c{outline:0!important;transform:none}
 @media (min-width:700px){.sheet{border-radius:26px}}
 /* while dragging a card, the floating bar and + step aside so every tile can be reached */
 body.dragging .tabbar,body.dragging .fab{opacity:0;pointer-events:none;transition:opacity .15s}
+
+/* ---- card details: patterns, logo badge, contactless, network ---- */
+.wcard::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit}
+.pat-rings::after{background:radial-gradient(circle at 108% 118%,transparent 0 28%,rgba(255,255,255,.20) 28% 29%,transparent 29% 40%,rgba(255,255,255,.15) 40% 41%,transparent 41% 53%,rgba(255,255,255,.10) 53% 54%,transparent 54%)}
+.pat-sash::after{background:linear-gradient(118deg,transparent 56%,rgba(255,214,102,.55) 56% 59.5%,transparent 59.5% 63%,rgba(255,214,102,.28) 63% 64%,transparent 64%)}
+.pat-glow::after{background:radial-gradient(55% 75% at 92% 8%,rgba(110,255,160,.42),transparent 62%),linear-gradient(160deg,transparent 64%,rgba(110,255,160,.35) 64% 64.6%,transparent 64.6%)}
+.pat-arcs::after{background:radial-gradient(circle at -4% 108%,transparent 0 40%,rgba(255,255,255,.18) 40% 41%,transparent 41% 56%,rgba(255,255,255,.12) 56% 57%,transparent 57% 72%,rgba(255,255,255,.08) 72% 73%,transparent 73%)}
+.pat-lines::after{background:repeating-linear-gradient(118deg,rgba(255,255,255,.075) 0 1px,transparent 1px 8px)}
+.pat-waves::after{background:radial-gradient(120% 55% at 30% 125%,rgba(255,255,255,.20),transparent 62%),radial-gradient(110% 50% at 85% 118%,rgba(255,255,255,.14),transparent 60%)}
+.pat-note::after{background:repeating-radial-gradient(circle at 82% 50%,rgba(255,255,255,.11) 0 1px,transparent 1px 7px)}
+.wc-top{display:flex;align-items:center;gap:8px}
+.wc-mark{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wc-logo{flex:0 0 auto;width:24px;height:24px;border-radius:7px;position:relative}
+.wc-logo-kaspi{background:#F14635;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85)}
+.wc-logo-kaspi::after{content:"";position:absolute;inset:6px;border-radius:3px;background:#fff}
+.wc-logo-halyk{border-radius:50%;background:radial-gradient(circle,#F7D277 0 35%,transparent 36%),radial-gradient(circle,transparent 0 55%,#F7D277 56% 70%,transparent 71%)}
+.wc-logo-freedom{background:#7CFF9E;border-radius:6px;box-shadow:0 0 12px rgba(124,255,158,.6)}
+.wc-mid{display:flex;align-items:center;gap:10px;position:relative}
+.wc-nfc{width:20px;height:20px;opacity:.8;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M8.5 8.5a5 5 0 0 1 0 7'/%3E%3Cpath d='M12 5a10 10 0 0 1 0 14'/%3E%3Cpath d='M15.5 2a15 15 0 0 1 0 20'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M8.5 8.5a5 5 0 0 1 0 7'/%3E%3Cpath d='M12 5a10 10 0 0 1 0 14'/%3E%3Cpath d='M15.5 2a15 15 0 0 1 0 20'/%3E%3C/svg%3E") center/contain no-repeat}
+.wcard{color:var(--cfg)}
+.wc-bot{flex-direction:row!important;align-items:flex-end;justify-content:space-between;gap:10px}
+.wc-bl{display:flex;flex-direction:column;min-width:0}
+.wc-net{flex:0 0 auto;position:relative}
+.wc-visa{font:italic 900 20px/1 Arial,Helvetica,sans-serif;letter-spacing:-.04em}
+.wc-mc{display:flex;width:40px;height:24px}
+.wc-mc i{width:24px;height:24px;border-radius:50%;display:block}
+.wc-mc i:first-child{background:#EB001B}
+.wc-mc i:last-child{background:#F79E1B;margin-left:-8px;opacity:.92}
+/* picker tiles show the same patterns */
+.skin{overflow:hidden}
+.skin::before{content:"";position:absolute;inset:0;pointer-events:none}
+.skin.pat-rings::before{background:radial-gradient(circle at 108% 118%,transparent 0 28%,rgba(255,255,255,.22) 28% 30%,transparent 30% 44%,rgba(255,255,255,.15) 44% 46%,transparent 46%)}
+.skin.pat-sash::before{background:linear-gradient(118deg,transparent 56%,rgba(255,214,102,.6) 56% 61%,transparent 61%)}
+.skin.pat-glow::before{background:radial-gradient(60% 80% at 92% 8%,rgba(110,255,160,.5),transparent 62%)}
+.skin.pat-arcs::before{background:radial-gradient(circle at -4% 108%,transparent 0 40%,rgba(255,255,255,.2) 40% 42%,transparent 42% 60%,rgba(255,255,255,.14) 60% 62%,transparent 62%)}
+.skin.pat-lines::before{background:repeating-linear-gradient(118deg,rgba(255,255,255,.09) 0 1px,transparent 1px 7px)}
+.skin.pat-waves::before{background:radial-gradient(120% 55% at 30% 125%,rgba(255,255,255,.24),transparent 62%)}
+.skin.pat-note::before{background:repeating-radial-gradient(circle at 82% 50%,rgba(255,255,255,.13) 0 1px,transparent 1px 6px)}
+.skin span{position:relative}
+.skin-custom{background:conic-gradient(from 200deg,#FF6B6B,#FFD93D,#6BCB77,#4D96FF,#C77DFF,#FF6B6B);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.cpick{width:46px;height:46px;border:0;border-radius:50%;padding:0;background:none;cursor:pointer}
+.cpick::-webkit-color-swatch-wrapper{padding:0}
+.cpick::-webkit-color-swatch{border:2px solid var(--line);border-radius:50%}

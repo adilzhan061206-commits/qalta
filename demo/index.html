@@ -513,6 +513,51 @@ body.dragging .bub.tile .bub-c{outline:0!important;transform:none}
 /* while dragging a card, the floating bar and + step aside so every tile can be reached */
 body.dragging .tabbar,body.dragging .fab{opacity:0;pointer-events:none;transition:opacity .15s}
 
+/* ---- card details: patterns, logo badge, contactless, network ---- */
+.wcard::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit}
+.pat-rings::after{background:radial-gradient(circle at 108% 118%,transparent 0 28%,rgba(255,255,255,.20) 28% 29%,transparent 29% 40%,rgba(255,255,255,.15) 40% 41%,transparent 41% 53%,rgba(255,255,255,.10) 53% 54%,transparent 54%)}
+.pat-sash::after{background:linear-gradient(118deg,transparent 56%,rgba(255,214,102,.55) 56% 59.5%,transparent 59.5% 63%,rgba(255,214,102,.28) 63% 64%,transparent 64%)}
+.pat-glow::after{background:radial-gradient(55% 75% at 92% 8%,rgba(110,255,160,.42),transparent 62%),linear-gradient(160deg,transparent 64%,rgba(110,255,160,.35) 64% 64.6%,transparent 64.6%)}
+.pat-arcs::after{background:radial-gradient(circle at -4% 108%,transparent 0 40%,rgba(255,255,255,.18) 40% 41%,transparent 41% 56%,rgba(255,255,255,.12) 56% 57%,transparent 57% 72%,rgba(255,255,255,.08) 72% 73%,transparent 73%)}
+.pat-lines::after{background:repeating-linear-gradient(118deg,rgba(255,255,255,.075) 0 1px,transparent 1px 8px)}
+.pat-waves::after{background:radial-gradient(120% 55% at 30% 125%,rgba(255,255,255,.20),transparent 62%),radial-gradient(110% 50% at 85% 118%,rgba(255,255,255,.14),transparent 60%)}
+.pat-note::after{background:repeating-radial-gradient(circle at 82% 50%,rgba(255,255,255,.11) 0 1px,transparent 1px 7px)}
+.wc-top{display:flex;align-items:center;gap:8px}
+.wc-mark{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wc-logo{flex:0 0 auto;width:24px;height:24px;border-radius:7px;position:relative}
+.wc-logo-kaspi{background:#F14635;box-shadow:inset 0 0 0 2px rgba(255,255,255,.85)}
+.wc-logo-kaspi::after{content:"";position:absolute;inset:6px;border-radius:3px;background:#fff}
+.wc-logo-halyk{border-radius:50%;background:radial-gradient(circle,#F7D277 0 35%,transparent 36%),radial-gradient(circle,transparent 0 55%,#F7D277 56% 70%,transparent 71%)}
+.wc-logo-freedom{background:#7CFF9E;border-radius:6px;box-shadow:0 0 12px rgba(124,255,158,.6)}
+.wc-mid{display:flex;align-items:center;gap:10px;position:relative}
+.wc-nfc{width:20px;height:20px;opacity:.8;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M8.5 8.5a5 5 0 0 1 0 7'/%3E%3Cpath d='M12 5a10 10 0 0 1 0 14'/%3E%3Cpath d='M15.5 2a15 15 0 0 1 0 20'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M8.5 8.5a5 5 0 0 1 0 7'/%3E%3Cpath d='M12 5a10 10 0 0 1 0 14'/%3E%3Cpath d='M15.5 2a15 15 0 0 1 0 20'/%3E%3C/svg%3E") center/contain no-repeat}
+.wcard{color:var(--cfg)}
+.wc-bot{flex-direction:row!important;align-items:flex-end;justify-content:space-between;gap:10px}
+.wc-bl{display:flex;flex-direction:column;min-width:0}
+.wc-net{flex:0 0 auto;position:relative}
+.wc-visa{font:italic 900 20px/1 Arial,Helvetica,sans-serif;letter-spacing:-.04em}
+.wc-mc{display:flex;width:40px;height:24px}
+.wc-mc i{width:24px;height:24px;border-radius:50%;display:block}
+.wc-mc i:first-child{background:#EB001B}
+.wc-mc i:last-child{background:#F79E1B;margin-left:-8px;opacity:.92}
+/* picker tiles show the same patterns */
+.skin{overflow:hidden}
+.skin::before{content:"";position:absolute;inset:0;pointer-events:none}
+.skin.pat-rings::before{background:radial-gradient(circle at 108% 118%,transparent 0 28%,rgba(255,255,255,.22) 28% 30%,transparent 30% 44%,rgba(255,255,255,.15) 44% 46%,transparent 46%)}
+.skin.pat-sash::before{background:linear-gradient(118deg,transparent 56%,rgba(255,214,102,.6) 56% 61%,transparent 61%)}
+.skin.pat-glow::before{background:radial-gradient(60% 80% at 92% 8%,rgba(110,255,160,.5),transparent 62%)}
+.skin.pat-arcs::before{background:radial-gradient(circle at -4% 108%,transparent 0 40%,rgba(255,255,255,.2) 40% 42%,transparent 42% 60%,rgba(255,255,255,.14) 60% 62%,transparent 62%)}
+.skin.pat-lines::before{background:repeating-linear-gradient(118deg,rgba(255,255,255,.09) 0 1px,transparent 1px 7px)}
+.skin.pat-waves::before{background:radial-gradient(120% 55% at 30% 125%,rgba(255,255,255,.24),transparent 62%)}
+.skin.pat-note::before{background:repeating-radial-gradient(circle at 82% 50%,rgba(255,255,255,.13) 0 1px,transparent 1px 6px)}
+.skin span{position:relative}
+.skin-custom{background:conic-gradient(from 200deg,#FF6B6B,#FFD93D,#6BCB77,#4D96FF,#C77DFF,#FF6B6B);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.cpick{width:46px;height:46px;border:0;border-radius:50%;padding:0;background:none;cursor:pointer}
+.cpick::-webkit-color-swatch-wrapper{padding:0}
+.cpick::-webkit-color-swatch{border:2px solid var(--line);border-radius:50%}
+
 </style>
 </head>
 <body>
@@ -1111,29 +1156,38 @@ function dueRecurring(){
 }
 
 /* ---------- wallet cards (UI2) ---------- */
-// [id, label in the picker, wordmark printed on the card, background, text colour]
+// [id, label in the picker, wordmark on the card, background, text colour, pattern, logo badge, default network]
+// Colours and layout follow each bank's cards; the wordmarks are plain text, not the banks' logos.
 const SKINS = [
-  ["kaspi_gold", "Kaspi Gold", "Kaspi.kz", "linear-gradient(135deg,#FBE08A 0%,#E7B53A 45%,#B8860E 100%)", "#3A2A00"],
-  ["kaspi_red", "Kaspi Red", "Kaspi.kz", "linear-gradient(135deg,#FF6A58 0%,#E8322A 55%,#B91C14 100%)", "#FFFFFF"],
-  ["halyk", "Halyk", "Halyk", "linear-gradient(135deg,#2DB487 0%,#13865F 55%,#0A5E43 100%)", "#FFFFFF"],
-  ["freedom", "Freedom", "Freedom", "linear-gradient(135deg,#2E3F63 0%,#18233B 60%,#0B1222 100%)", "#E9FFF2"],
-  ["jusan", "Jusan", "Jusan", "linear-gradient(135deg,#FF9A52 0%,#F26B12 55%,#C44F00 100%)", "#FFFFFF"],
-  ["bcc", "BCC", "BCC", "linear-gradient(135deg,#1B98A4 0%,#0E7480 55%,#07525A 100%)", "#FFFFFF"],
-  ["forte", "ForteBank", "ForteBank", "linear-gradient(135deg,#A13A83 0%,#7A2161 55%,#4F103E 100%)", "#FFFFFF"],
-  ["homecredit", "Home Credit", "Home Credit", "linear-gradient(135deg,#F2525C 0%,#D41F2C 55%,#9A0E18 100%)", "#FFFFFF"],
-  ["otbasy", "Otbasy", "Otbasy Bank", "linear-gradient(135deg,#43A3D6 0%,#1F78B0 55%,#11527E 100%)", "#FFFFFF"],
-  ["bereke", "Bereke", "Bereke", "linear-gradient(135deg,#25C486 0%,#00965F 55%,#006A43 100%)", "#FFFFFF"],
-  ["eurasian", "Eurasian", "Eurasian", "linear-gradient(135deg,#E2334F 0%,#B0122C 55%,#73091B 100%)", "#FFFFFF"],
-  ["black", "Black", "Card", "linear-gradient(135deg,#46464A 0%,#1F1F22 60%,#0B0B0D 100%)", "#F5F5F7"],
-  ["cash", "Қолма-қол", "Қолма-қол", "linear-gradient(135deg,#8CC79A 0%,#4E9363 55%,#2F6942 100%)", "#FFFFFF"],
-  ["usd", "Доллар", "USD", "linear-gradient(135deg,#A9C49E 0%,#6E8F63 55%,#47663E 100%)", "#FFFFFF"],
-  ["deposit", "Депозит", "Депозит", "linear-gradient(135deg,#7C74FF 0%,#5249E0 55%,#3029A8 100%)", "#FFFFFF"],
-  ["blue", "Көк", "Card", "linear-gradient(135deg,#5B9BFF 0%,#2F6FE6 55%,#1C49A8 100%)", "#FFFFFF"],
-  ["pink", "Қызғылт", "Card", "linear-gradient(135deg,#FF8BC2 0%,#E8508F 55%,#B02A63 100%)", "#FFFFFF"],
-  ["silver", "Күміс", "Card", "linear-gradient(135deg,#F4F5F7 0%,#D3D7DE 55%,#AEB4BF 100%)", "#1B1F27"]
-].map(([id, label, mark, bg, fg]) => ({id, label, mark, bg, fg}));
+  ["kaspi_gold", "Kaspi Gold", "Kaspi Gold", "linear-gradient(140deg,#FCE6A0 0%,#F0C24B 38%,#D9A12A 70%,#B98613 100%)", "#2E2100", "rings", "kaspi", "visa"],
+  ["kaspi_red", "Kaspi Red", "Kaspi Red", "linear-gradient(140deg,#FF6F5E 0%,#F03A2E 45%,#C4170F 100%)", "#FFFFFF", "rings", "kaspi", "visa"],
+  ["halyk", "Halyk", "Halyk", "linear-gradient(140deg,#1DAA7C 0%,#0E8560 50%,#075A41 100%)", "#FFFFFF", "sash", "halyk", "visa"],
+  ["freedom", "Freedom", "Freedom", "linear-gradient(140deg,#20252E 0%,#11151B 60%,#05070A 100%)", "#F2FFF6", "glow", "freedom", "mc"],
+  ["jusan", "Jusan", "Jusan", "linear-gradient(140deg,#FFA45C 0%,#F77A1C 50%,#D35A00 100%)", "#FFFFFF", "arcs", "", "visa"],
+  ["bcc", "BCC", "BCC", "linear-gradient(140deg,#25A87A 0%,#0F7F5C 55%,#08583F 100%)", "#FFFFFF", "lines", "", "visa"],
+  ["forte", "ForteBank", "ForteBank", "linear-gradient(140deg,#B1478F 0%,#86236A 55%,#561244 100%)", "#FFFFFF", "arcs", "", "mc"],
+  ["homecredit", "Home Credit", "Home Credit", "linear-gradient(140deg,#F2525C 0%,#D7192A 55%,#9E0B18 100%)", "#FFFFFF", "lines", "", "visa"],
+  ["otbasy", "Otbasy", "Otbasy Bank", "linear-gradient(140deg,#3FB0B7 0%,#1C8B9A 50%,#0F6274 100%)", "#FFFFFF", "waves", "", "visa"],
+  ["bereke", "Bereke", "Bereke", "linear-gradient(140deg,#35C98C 0%,#0E9C63 55%,#066B44 100%)", "#FFFFFF", "waves", "", "mc"],
+  ["eurasian", "Eurasian", "Eurasian", "linear-gradient(140deg,#E2334F 0%,#B0122C 55%,#73091B 100%)", "#FFFFFF", "lines", "", "mc"],
+  ["black", "Black", "", "linear-gradient(140deg,#4A4A4F 0%,#212125 60%,#0B0B0D 100%)", "#F5F5F7", "lines", "", "mc"],
+  ["cash", "Қолма-қол", "Қолма-қол", "linear-gradient(140deg,#94CDA1 0%,#58A06D 55%,#33744A 100%)", "#FFFFFF", "note", "", ""],
+  ["usd", "Доллар", "US Dollar", "linear-gradient(140deg,#B4CBA5 0%,#7B9A6C 55%,#4E6B45 100%)", "#FFFFFF", "note", "", ""],
+  ["deposit", "Депозит", "Депозит", "linear-gradient(140deg,#8A83FF 0%,#5A50E6 55%,#3129A8 100%)", "#FFFFFF", "waves", "", ""],
+  ["blue", "Көк", "", "linear-gradient(140deg,#5B9BFF 0%,#2F6FE6 55%,#1C49A8 100%)", "#FFFFFF", "arcs", "", ""],
+  ["pink", "Қызғылт", "", "linear-gradient(140deg,#FF8BC2 0%,#E8508F 55%,#B02A63 100%)", "#FFFFFF", "arcs", "", ""],
+  ["silver", "Күміс", "", "linear-gradient(140deg,#F7F8FA 0%,#D6DAE1 55%,#B0B6C1 100%)", "#1B1F27", "lines", "", ""]
+].map(([id, label, mark, bg, fg, pat, logo, net]) => ({id, label, mark, bg, fg, pat, logo, net}));
+const PATTERNS = [["none", "Жоқ"], ["rings", "Шеңбер"], ["lines", "Сызық"], ["waves", "Толқын"], ["arcs", "Доға"], ["glow", "Жарқыл"]];
+// text colour that reads on a custom card
+function inkFor(hex){ const n = parseInt((hex || "#000000").slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#1B1F27" : "#FFFFFF"; }
+function customSkin(a){
+  const c1 = (a && a.c1) || "#5B9BFF", c2 = (a && a.c2) || "#1C49A8";
+  return {id: "custom", label: "Өз дизайным", mark: "", bg: `linear-gradient(140deg,${c1} 0%,${c2} 100%)`, fg: inkFor(c1), pat: (a && a.pat) || "rings", logo: "", net: ""};
+}
 const SKIN = Object.fromEntries(SKINS.map(x => [x.id, x]));
 function skinOf(a){
+  if (a && a.skin === "custom") return customSkin(a);
   if (a && a.skin && SKIN[a.skin]) return SKIN[a.skin];
   const n = ((a && a.name) || "").toLowerCase(), cur = (a && a.cur) || "KZT";
   const has = (...w) => w.some(x => n.includes(x));
@@ -1154,14 +1208,26 @@ function skinOf(a){
 }
 function cardHTML(a, v, opt){
   opt = opt || {};
-  const s = opt.skin || skinOf(a), cur = (a && a.cur) || "KZT", cash = s.id === "cash" || s.id === "usd";
+  const s = opt.skin || skinOf(a), cur = (a && a.cur) || "KZT", cash = s.pat === "note";
+  const net = a && a.net !== undefined && a.net !== null && a.net !== "auto" ? a.net : s.net;
   const attrs = opt.preview ? "" : `data-act="editAcc" data-id="${esc(a.id)}"${opt.drag ? ` data-kind="acc" data-drag="1"` : ""}`;
   const tag = opt.preview ? "div" : "button";
-  return `<${tag} class="wcard${opt.drag ? " bub acc" : ""}" ${attrs} style="--cbg:${s.bg};--cfg:${s.fg}">
-    <span class="wc-top"><b class="wc-mark">${esc(s.mark)}</b><span class="wc-cur">${esc(cur)}</span></span>
-    ${cash ? `<span class="wc-sym">${esc(sym(cur))}</span>` : `<span class="wc-chip"></span>`}
-    <span class="wc-bot"><span class="wc-name">${esc((a && a.name) || "")}</span><b class="wc-bal num">${esc(fmtC(v || 0, cur))}</b></span>
+  const logo = s.logo ? `<span class="wc-logo wc-logo-${s.logo}" aria-hidden="true"></span>` : "";
+  const mark = s.mark || "";
+  const netMark = net === "visa" ? `<span class="wc-net wc-visa">VISA</span>` : net === "mc" ? `<span class="wc-net wc-mc" aria-label="Mastercard"><i></i><i></i></span>` : "";
+  return `<${tag} class="wcard pat-${s.pat || "none"}" ${attrs} style="--cbg:${s.bg};--cfg:${s.fg}">
+    <span class="wc-top">${logo}<b class="wc-mark">${esc(mark)}</b><span class="wc-cur">${esc(cur)}</span></span>
+    ${cash ? `<span class="wc-sym">${esc(sym(cur))}</span>` : `<span class="wc-mid"><span class="wc-chip"></span><span class="wc-nfc" aria-hidden="true"></span></span>`}
+    <span class="wc-bot"><span class="wc-bl"><span class="wc-name">${esc((a && a.name) || "")}</span><b class="wc-bal num">${esc(fmtC(v || 0, cur))}</b></span>${netMark}</span>
     <span class="bub-c wc-ic">${esc((a && a.icon) || "💳")}</span></${tag}>`;
+}
+// re-draw the card preview in the account sheet from what is typed / picked right now
+function skinPreview(box){
+  const prev = $("#a-prev", box); if (!prev) return;
+  const id = $("#a-skin", box).value, val = sel => ($(sel, box) || {}).value;
+  const a = {name: val("#a-name") || "", cur: val("#a-cur") || "KZT", icon: val("#a-icon"), skin: id, c1: val("#a-c1"), c2: val("#a-c2"), pat: val("#a-pat"), net: val("#a-net")};
+  prev.innerHTML = cardHTML(a, +prev.dataset.bal || 0, {preview: true});
+  const cust = $("#a-custom", box); if (cust) cust.hidden = id !== "custom";
 }
 const I2 = {
   minus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>',
@@ -2095,7 +2161,10 @@ function openAcc(id){
   openSheet(a ? "Шотты өзгерту" : "Жаңа шот", `${UI2 ? `
     <div class="skin-prev" id="a-prev" data-bal="${a ? balances()[a.id] : 0}">${cardHTML(a || {name: "", cur: "KZT"}, a ? balances()[a.id] : 0, {preview: true})}</div>
     <input type="hidden" id="a-skin" value="${skinOf(a).id}">
-    <div class="field"><span class="flabel">Карта түрі</span><div class="skins">${SKINS.map(x => `<button type="button" class="skin" data-act="pickSkin" data-v="${x.id}" aria-pressed="${skinOf(a).id === x.id}" style="--cbg:${x.bg};--cfg:${x.fg}"><span>${esc(x.label)}</span></button>`).join("")}</div></div>` : ""}
+    <div class="field"><span class="flabel">Карта түрі</span><div class="skins">${SKINS.map(x => `<button type="button" class="skin pat-${x.pat}" data-act="pickSkin" data-v="${x.id}" aria-pressed="${skinOf(a).id === x.id}" style="--cbg:${x.bg};--cfg:${x.fg}"><span>${esc(x.label)}</span></button>`).join("")}<button type="button" class="skin skin-custom" data-act="pickSkin" data-v="custom" aria-pressed="${skinOf(a).id === "custom"}"><span>🎨 Өз дизайным</span></button></div></div>
+    <div class="field" id="a-custom" ${skinOf(a).id === "custom" ? "" : "hidden"}><span class="flabel">Өз дизайным: түстер мен өрнек</span>
+      <div class="frow" style="grid-template-columns:auto auto minmax(0,1fr);align-items:center"><input type="color" class="cpick" id="a-c1" value="${esc((a && a.c1) || "#5B9BFF")}" aria-label="Бірінші түс"><input type="color" class="cpick" id="a-c2" value="${esc((a && a.c2) || "#1C49A8")}" aria-label="Екінші түс"><select class="inp" id="a-pat">${PATTERNS.map(([v, l]) => `<option value="${v}" ${((a && a.pat) || "rings") === v ? "selected" : ""}>${l}</option>`).join("")}</select></div></div>
+    <div class="field"><label for="a-net">Төлем жүйесі</label><select class="inp" id="a-net">${[["auto", "Банк бойынша"], ["visa", "Visa"], ["mc", "Mastercard"], ["", "Жоқ"]].map(([v, l]) => `<option value="${v}" ${((a && a.net !== undefined && a.net !== null) ? a.net : "auto") === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>` : ""}
     <div class="frow" style="grid-template-columns:80px 1fr"><div class="field"><label for="a-icon">Белгі</label><input class="inp" id="a-icon" maxlength="4" value="${esc(a ? a.icon : "💳")}" style="text-align:center;font-size:20px"></div><div class="field"><label for="a-name">Атауы</label><input class="inp" id="a-name" placeholder="Мысалы: Kaspi Gold" value="${esc(a ? a.name : "")}"></div></div>
     <div class="field"><label for="a-cur">Валюта</label><select class="inp" id="a-cur">${curOptions(a ? a.cur : "KZT")}</select>${a && allTx().some(t => t.acc === a.id || t.to === a.id) ? `<span class="small muted">Валютаны өзгертсеңіз, бұрынғы операциялардың сомасы жаңа валютада саналады.</span>` : `<span class="small muted">Мысалы, долларлық депозит үшін $ таңдаңыз — теңгеге бүгінгі бағаммен есептеледі.</span>`}</div>
     <div class="field"><label for="a-init">Бастапқы қалдық</label><input class="inp num" id="a-init" inputmode="decimal" value="${a ? esc(a.initial) : ""}" placeholder="0"><span class="small muted">Қосымшаны бастаған кездегі шоттағы сома. Қазіргі қалдық = бастапқы + кіріс − шығын.</span></div>
@@ -2104,6 +2173,7 @@ function openAcc(id){
     <button class="btn primary block" id="a-save">Сақтау</button>
     ${a && S.settings.accounts.length > 1 ? `<div class="card section" style="background:var(--surface-2);box-shadow:none;margin-top:6px"><b>Бұл ақшаны жұмсай алмайсыз ба?</b><span class="small muted">Депозит (мысалы, Otbasy) болса, оны депозитке айналдырыңыз. Ол шоттар мен «Барлық шоттарда» сомасынан шығып, «Мақсаттар» бөлімінде тұрады. Пайызы ай сайын өзі түседі. Бұрынғы аударымдар депозитке салым болып сақталады.</span><div class="frow"><div class="field"><label for="a-rate">Жылдық %</label><input class="inp num" id="a-rate" inputmode="decimal" placeholder="2"></div><div class="field"><label for="a-pd">Пайыз күні</label><input class="inp num" id="a-pd" inputmode="numeric" value="1"></div></div><button class="btn block" id="a-dep">🔒 Депозитке айналдыру</button></div>
     <button class="btn danger block" id="a-del">Шотты өшіру</button>` : ""}`, b => {
+    if (UI2) ["#a-name", "#a-cur", "#a-icon", "#a-c1", "#a-c2", "#a-pat", "#a-net"].forEach(q => { const el = $(q, b); if (el) el.addEventListener("input", () => skinPreview(b)); });
     $("#a-save", b).onclick = () => {
       const name = $("#a-name", b).value.trim(); if (!name) { $("#a-err", b).textContent = "Атауын жазыңыз."; return; }
       let init = parseAmt($("#a-init", b).value || 0); if (!isFinite(init)) init = 0;
@@ -2111,8 +2181,9 @@ function openAcc(id){
       if (a && nowEl && nowEl.value.trim()) { const now = parseAmt(nowEl.value); if (isFinite(now)) init = init + (now - balances()[a.id]); }
       const cur = $("#a-cur", b).value || "KZT";
       const skinEl = $("#a-skin", b), skin = skinEl ? skinEl.value : (a && a.skin) || "";
-      if (a) Object.assign(a, {name, icon: $("#a-icon", b).value.trim() || "💳", initial: Math.round(init * 100) / 100, cur, skin});
-      else S.settings.accounts.push({id: uid(), name, icon: $("#a-icon", b).value.trim() || "💳", initial: init, cur, skin});
+      const look = skinEl ? {skin, net: $("#a-net", b).value, ...(skin === "custom" ? {c1: $("#a-c1", b).value, c2: $("#a-c2", b).value, pat: $("#a-pat", b).value} : {})} : {};
+      if (a) Object.assign(a, {name, icon: $("#a-icon", b).value.trim() || "💳", initial: Math.round(init * 100) / 100, cur}, look);
+      else S.settings.accounts.push({id: uid(), name, icon: $("#a-icon", b).value.trim() || "💳", initial: init, cur, ...look});
       if (cur !== "KZT") fetchRates().then(ok => { if (ok) render(); });
       commitSettings(); closeSheet(); toast("Сақталды");
     };
@@ -2452,11 +2523,13 @@ const ACT = {
   wipe: el => armDelete(el, wipe),
   demo: () => enterDemo(),
   pickSkin: el => {
-    const box = el.closest(".sheet") || document, x = SKIN[el.dataset.v]; if (!x) return;
-    $("#a-skin", box).value = x.id;
+    const box = el.closest(".sheet") || document, id = el.dataset.v; if (!SKIN[id] && id !== "custom") return;
+    $("#a-skin", box).value = id;
     $$(".skin", box).forEach(s => s.setAttribute("aria-pressed", s === el));
-    const prev = $("#a-prev", box), name = ($("#a-name", box) || {}).value || "", cur = ($("#a-cur", box) || {}).value || "KZT";
-    if (prev) prev.innerHTML = cardHTML({name, cur}, +prev.dataset.bal || 0, {preview: true, skin: x});
+    const curSel = $("#a-cur", box);
+    if (curSel && id === "usd" && curSel.value === "KZT") curSel.value = "USD";
+    if (curSel && id !== "usd" && curSel.value === "USD" && ["cash", "kaspi_gold", "kaspi_red", "halyk", "jusan", "otbasy"].includes(id)) curSel.value = "KZT";
+    skinPreview(box);
   },
   lang: el => { if (el.dataset.v === LANG) return; if (LANG !== "kk") { lsSet("qalta-demo-lang", el.dataset.v); location.reload(); return; } setLang(el.dataset.v); render(); },
   apOn: () => apOn(),
