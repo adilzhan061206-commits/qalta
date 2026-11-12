@@ -379,6 +379,7 @@ code.key{background:var(--surface-2);border-radius:6px;padding:1px 6px;font-weig
 <script>
 (function(){
 "use strict";
+const UI2 = false;   // the redesigned home + wallet cards; switched on only in demo/ (tools/build_demo.py)
 /* ---------- helpers ---------- */
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
@@ -903,7 +904,7 @@ function render(){
   const tabBtns = TABS.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
   $("#tabbar").innerHTML = tabBtns;
   $("#side").innerHTML = `<div class="brand"><div class="logo">₸</div><b>Қалта</b></div>${tabBtns}<button class="btn primary add-btn" data-act="newTx">${I.plus} Операция қосу</button>`;
-  const V = {home: vHome, ops: vOps, an: vAnalysis, goals: vGoals, more: vMore}[ui.tab] || vHome;
+  const V = {home: UI2 ? vHome2 : vHome, ops: vOps, an: vAnalysis, goals: vGoals, more: vMore}[ui.tab] || vHome;
   const titles = {home: "", ops: "Операциялар", an: "Талдау", goals: "Мақсаттар", more: "Тағы"};
   let banner = "";
   if (mode === "demo") banner = `<div class="banner demo"><span>Бұл мысал деректер. Ештеңе сақталмайды.</span><button class="btn sm primary" data-act="exitDemo">Өз деректеріме оралу</button></div>`;
@@ -950,25 +951,108 @@ function dueRecurring(){
   const k = curMonth(), day = new Date().getDate(), dim = daysIn(k);
   return S.settings.recurring.filter(r => r.last !== k && Math.min(r.day, dim) - day <= 3).sort((a, b) => a.day - b.day);
 }
-function vHome(){
+
+/* ---------- wallet cards (UI2) ---------- */
+// [id, label in the picker, wordmark printed on the card, background, text colour]
+const SKINS = [
+  ["kaspi_gold", "Kaspi Gold", "Kaspi.kz", "linear-gradient(135deg,#FBE08A 0%,#E7B53A 45%,#B8860E 100%)", "#3A2A00"],
+  ["kaspi_red", "Kaspi Red", "Kaspi.kz", "linear-gradient(135deg,#FF6A58 0%,#E8322A 55%,#B91C14 100%)", "#FFFFFF"],
+  ["halyk", "Halyk", "Halyk", "linear-gradient(135deg,#2DB487 0%,#13865F 55%,#0A5E43 100%)", "#FFFFFF"],
+  ["freedom", "Freedom", "Freedom", "linear-gradient(135deg,#2E3F63 0%,#18233B 60%,#0B1222 100%)", "#E9FFF2"],
+  ["jusan", "Jusan", "Jusan", "linear-gradient(135deg,#FF9A52 0%,#F26B12 55%,#C44F00 100%)", "#FFFFFF"],
+  ["bcc", "BCC", "BCC", "linear-gradient(135deg,#1B98A4 0%,#0E7480 55%,#07525A 100%)", "#FFFFFF"],
+  ["forte", "ForteBank", "ForteBank", "linear-gradient(135deg,#A13A83 0%,#7A2161 55%,#4F103E 100%)", "#FFFFFF"],
+  ["homecredit", "Home Credit", "Home Credit", "linear-gradient(135deg,#F2525C 0%,#D41F2C 55%,#9A0E18 100%)", "#FFFFFF"],
+  ["otbasy", "Otbasy", "Otbasy Bank", "linear-gradient(135deg,#43A3D6 0%,#1F78B0 55%,#11527E 100%)", "#FFFFFF"],
+  ["bereke", "Bereke", "Bereke", "linear-gradient(135deg,#25C486 0%,#00965F 55%,#006A43 100%)", "#FFFFFF"],
+  ["eurasian", "Eurasian", "Eurasian", "linear-gradient(135deg,#E2334F 0%,#B0122C 55%,#73091B 100%)", "#FFFFFF"],
+  ["black", "Black", "Card", "linear-gradient(135deg,#46464A 0%,#1F1F22 60%,#0B0B0D 100%)", "#F5F5F7"],
+  ["cash", "Қолма-қол", "Қолма-қол", "linear-gradient(135deg,#8CC79A 0%,#4E9363 55%,#2F6942 100%)", "#FFFFFF"],
+  ["usd", "Доллар", "USD", "linear-gradient(135deg,#A9C49E 0%,#6E8F63 55%,#47663E 100%)", "#FFFFFF"],
+  ["deposit", "Депозит", "Депозит", "linear-gradient(135deg,#7C74FF 0%,#5249E0 55%,#3029A8 100%)", "#FFFFFF"],
+  ["blue", "Көк", "Card", "linear-gradient(135deg,#5B9BFF 0%,#2F6FE6 55%,#1C49A8 100%)", "#FFFFFF"],
+  ["pink", "Қызғылт", "Card", "linear-gradient(135deg,#FF8BC2 0%,#E8508F 55%,#B02A63 100%)", "#FFFFFF"],
+  ["silver", "Күміс", "Card", "linear-gradient(135deg,#F4F5F7 0%,#D3D7DE 55%,#AEB4BF 100%)", "#1B1F27"]
+].map(([id, label, mark, bg, fg]) => ({id, label, mark, bg, fg}));
+const SKIN = Object.fromEntries(SKINS.map(x => [x.id, x]));
+function skinOf(a){
+  if (a && a.skin && SKIN[a.skin]) return SKIN[a.skin];
+  const n = ((a && a.name) || "").toLowerCase(), cur = (a && a.cur) || "KZT";
+  const has = (...w) => w.some(x => n.includes(x));
+  if (has("kaspi", "каспи")) return SKIN[has("red", "ред") ? "kaspi_red" : "kaspi_gold"];
+  if (has("halyk", "халык", "халық")) return SKIN.halyk;
+  if (has("freedom", "фридом")) return SKIN.freedom;
+  if (has("jusan", "жусан")) return SKIN.jusan;
+  if (has("forte", "форте")) return SKIN.forte;
+  if (has("home credit", "хоум")) return SKIN.homecredit;
+  if (has("otbasy", "отбасы")) return SKIN.otbasy;
+  if (has("bereke", "береке")) return SKIN.bereke;
+  if (has("eurasian", "евразий", "еуразия")) return SKIN.eurasian;
+  if (has("bcc", "центркредит")) return SKIN.bcc;
+  if (has("қолма", "нал", "cash")) return SKIN.cash;
+  if (has("депозит", "deposit")) return SKIN.deposit;
+  if (cur === "USD") return SKIN.usd;
+  return SKIN.black;
+}
+function cardHTML(a, v, opt){
+  opt = opt || {};
+  const s = opt.skin || skinOf(a), cur = (a && a.cur) || "KZT", cash = s.id === "cash" || s.id === "usd";
+  const attrs = opt.preview ? "" : `data-act="editAcc" data-id="${esc(a.id)}"${opt.drag ? ` data-kind="acc" data-drag="1"` : ""}`;
+  const tag = opt.preview ? "div" : "button";
+  return `<${tag} class="wcard${opt.drag ? " bub acc" : ""}" ${attrs} style="--cbg:${s.bg};--cfg:${s.fg}">
+    <span class="wc-top"><b class="wc-mark">${esc(s.mark)}</b><span class="wc-cur">${esc(cur)}</span></span>
+    ${cash ? `<span class="wc-sym">${esc(sym(cur))}</span>` : `<span class="wc-chip"></span>`}
+    <span class="wc-bot"><span class="wc-name">${esc((a && a.name) || "")}</span><b class="wc-bal num">${esc(fmtC(v || 0, cur))}</b></span>
+    <span class="bub-c wc-ic">${esc((a && a.icon) || "💳")}</span></${tag}>`;
+}
+const I2 = {
+  minus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  swap: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg>',
+  jar: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8M9 3v3l-2 3v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9l-2-3V3"/><path d="M7 13h10"/></svg>'
+};
+function vHome2(){
   const k = curMonth(), st = monthStats(k), bal = balances(), total = totalBalance();
   const dim = daysIn(k), day = new Date().getDate(), left = dim - day + 1;
   const free = st.inc - st.exp - Math.max(0, st.sav);
-  let dayLine;
-  if (st.inc <= 0) dayLine = `<span>Осы айдағы кірісті қосыңыз — күндік лимит есептеледі.</span>`;
-  else if (free > 0) dayLine = `<span>Бүгін жұмсауға болады</span><b class="num">≈ ${fmt(free / left)}</b><span style="opacity:.8">· айдың соңына ${left} күн</span>`;
-  else dayLine = `<span>Бұл айда шығын кірістен ${fmt(-free)} асып кетті.</span>`;
-
+  const {notes, goalsMini, recent, onboarding} = homeExtras(st, k, day);
+  const byVal = (arr, v) => arr.map((x, i) => ({x, i, v: v(x)})).sort((a, b) => (b.v - a.v) || (a.i - b.i)).map(o => o.x);
+  const cards = byVal(S.settings.accounts, a => toKZT(bal[a.id], a.cur)).map(a => cardHTML(a, bal[a.id], {drag: true})).join("")
+    + `<button class="wcard wadd" data-act="editAcc"><span class="wadd-plus">+</span><span>Карта қосу</span></button>`;
   const incCats = S.settings.cats.filter(c => c.type === "inc"), expCats = S.settings.cats.filter(c => c.type === "exp");
   const incBy = {}; for (const t of st.txs) if (t.t === "inc") incBy[t.c] = (incBy[t.c] || 0) + txKZT(t);
-  const bubV = (v, txt) => `<span class="bub-v num ${v ? "" : "zero"}${txt.length > 9 ? " long" : ""}">${txt}</span>`;
-  const byVal = (arr, v) => arr.map((x, i) => ({x, i, v: v(x)})).sort((a, b) => (b.v - a.v) || (a.i - b.i)).map(o => o.x);
-  const incB = byVal(incCats, c => incBy[c.id] || 0).map(c => `<button class="bub inc" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(incBy[c.id], fmt(incBy[c.id] || 0))}</button>`).join("") + `<button class="bub add" data-act="editCat" data-type="inc"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
-  const accB = byVal(S.settings.accounts, a => toKZT(bal[a.id], a.cur)).map(a => `<button class="bub acc" data-kind="acc" data-id="${esc(a.id)}" data-drag="1" data-act="editAcc"><span class="bub-c">${esc(a.icon)}</span><span class="bub-n">${esc(a.name)}</span><span class="bub-v num ${bal[a.id] < 0 ? "neg" : ""}">${esc(fmtC(bal[a.id], a.cur))}</span></button>`).join("") + `<button class="bub add" data-act="editAcc"><span class="bub-c">+</span><span class="bub-n">Шот қосу</span></button>`;
-  const expB = byVal(expCats, c => st.byCat[c.id] || 0).map(c => { const v = st.byCat[c.id] || 0, lim = S.settings.budgets[c.id]; const p = lim ? Math.min(100, v / lim * 100) : 0; const rc = lim && v > lim ? "var(--neg)" : p > 80 ? "var(--warn)" : "var(--pos)";
-    return `<button class="bub exp" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c ${lim ? "ring" : ""}" style="${lim ? `--p:${p};--rc:${rc}` : ""}">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(v, fmt(v))}</button>`; }).join("") + `<button class="bub add" data-act="editCat" data-type="exp"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
-  const accs = S.settings.accounts.map(a => `<button class="acc" data-act="editAcc" data-id="${esc(a.id)}"><span class="ic">${esc(a.icon)}</span><small>${esc(a.name)}</small><b class="num ${bal[a.id] < 0 ? "neg" : ""}">${fmtC(bal[a.id], a.cur)}</b>${a.cur && a.cur !== "KZT" ? `<small class="num">${rate(a.cur) ? "≈ " + fmt(toKZT(bal[a.id], a.cur)) : "бағам жоқ"}</small>` : ""}</button>`).join("") + `<button class="acc add" data-act="editAcc">+ Шот</button>`;
+  const tiles = byVal(expCats, c => st.byCat[c.id] || 0).map(c => {
+    const v = st.byCat[c.id] || 0, lim = S.settings.budgets[c.id], p = lim ? Math.min(100, v / lim * 100) : 0;
+    const cls = lim && v > lim ? "over" : p > 80 ? "warn" : "ok";
+    return `<button class="bub exp tile${v ? "" : " zero"}" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="tile-n">${esc(c.name)}</span><b class="tile-v num">${fmt(v)}</b>${lim ? `<span class="bar"><i class="${cls}" style="width:${p}%"></i></span>` : ""}</button>`;
+  }).join("") + `<button class="tile tile-add" data-act="editCat" data-type="exp"><span class="bub-c">+</span><span class="tile-n">Санат қосу</span></button>`;
+  const incChips = byVal(incCats, c => incBy[c.id] || 0).map(c => `<button class="bub inc ichip${incBy[c.id] ? "" : " zero"}" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="ichip-n">${esc(c.name)}</span><b class="num">${fmt(incBy[c.id] || 0)}</b></button>`).join("");
+  const qa = (ic, label, attrs) => `<button class="qa" ${attrs}><span class="qa-c">${ic}</span><span class="qa-l">${label}</span></button>`;
+  const spentP = st.inc > 0 ? Math.min(100, st.exp / st.inc * 100) : (st.exp ? 100 : 0);
+  const savP = st.inc > 0 ? Math.max(0, Math.min(100 - spentP, st.sav / st.inc * 100)) : 0;
+  let dayLine;
+  if (st.inc <= 0) dayLine = `Осы айдағы кірісті қосыңыз — күндік лимит есептеледі.`;
+  else if (free > 0) dayLine = `Бүгін жұмсауға болады <b class="num">≈ ${fmt(free / left)}</b> · айдың соңына ${left} күн`;
+  else dayLine = `Бұл айда шығын кірістен ${fmt(-free)} асып кетті.`;
+  return `<div class="stack home2">
+    <section class="h2-total"><span class="h2-lbl">Барлық шоттарда</span><div class="h2-big num">${fmt(total)}</div><div class="h2-day">${dayLine}</div></section>
+    <div class="wallet" role="list">${cards}</div>
+    <div class="qas">${qa(I2.minus, "Шығын", `data-act="newTx" data-type="exp"`)}${qa(I2.plus, "Кіріс", `data-act="newTx" data-type="inc"`)}${qa(I2.swap, "Аударым", `data-act="newTx" data-type="tr"`)}${qa(I2.jar, "Жинақ", `data-act="tab" data-tab="goals"`)}</div>
+    <section class="card section month2"><div class="sec-h"><h2>${MONTHS[+k.slice(5) - 1]}</h2>${allTx().length ? `<span class="small muted">Ай соңына болжам: <b class="num">≈ ${fmt(forecast().end)}</b></span>` : ""}</div>
+      <div class="m2-row"><div><small>Кіріс</small><b class="num pos">+${fmt(st.inc)}</b></div><div><small>Шығын</small><b class="num">−${fmt(st.exp)}</b></div><div><small>Жинаққа</small><b class="num">${fmt(st.sav)}</b></div></div>
+      <div class="m2-bar"><i class="m2-exp" style="width:${spentP}%"></i><i class="m2-sav" style="width:${savP}%"></i></div></section>
+    <section class="card section"><div class="sec-h"><h2>Шығындар</h2><button class="link" data-act="newSplit">👥 Счет бөлу</button></div><div class="tiles">${tiles}</div><p class="drag-hint">Картаны ұстап, санатқа сүйреңіз — шығын жазылады. Кірісті картаға сүйресеңіз — табыс, картаны картаға — аударым.</p></section>
+    <section class="card section"><div class="sec-h"><h2>Кірістер</h2><span class="small muted num">${fmt(st.inc)}</span></div><div class="ichips">${incChips}</div></section>
+    ${splitsHome()}
+    ${notes.length ? `<section class="section"><div class="sec-h"><h2>Назар аударыңыз</h2></div>${notes.join("")}</section>` : ""}
+    ${onboarding}
+    <div class="grid2">
+    <section class="card section"><div class="sec-h"><h2>Осы айдағы операциялар</h2><button class="link" data-act="tab" data-tab="ops">Барлығы</button></div>${recent.length ? `<div class="list">${recent.map(txRow).join("")}</div>` : `<div class="empty">Бұл айда әзірге операция жоқ.</div>`}</section>
+    <section class="card section"><div class="sec-h"><h2>Мақсаттар</h2><button class="link" data-act="${S.settings.goals.length ? "tab" : "editGoal"}" data-tab="goals">${S.settings.goals.length ? "Барлығы" : "+ Қосу"}</button></div>${goalsMini ? `<div class="list">${goalsMini}</div>` : `<div class="empty"><b>Не үшін жинайсыз?</b>Телефон, демалыс, қауіпсіздік қоры — мақсат қойып, депозит сияқты толтырып отырыңыз.</div>`}</section>
+    </div></div>`;
+}
 
+function homeExtras(st, k, day){
   const notes = [];
   for (const r of dueRecurring()) {
     const late = r.day < day;
@@ -988,6 +1072,29 @@ function vHome(){
   const recent = sortTx(st.txs).slice(0, 8);
   const hasAny = allTx().length > 0;
   const onboarding = !hasAny ? `<div class="card section"><h2 style="font-size:16px">Бастайық</h2><ol class="tips small"><li>Шоттардағы қазіргі ақшаңызды енгізіңіз (жоғарыдағы шотты басыңыз).</li><li>Әр шығынды «+» батырмасымен жазып отырыңыз — 5 секунд.</li><li>Мақсат қойып, оған ақша жинаңыз. Ай соңында «Талдау» бетінен ақшаның қайда кеткенін көресіз.</li></ol><div class="btns"><button class="btn primary" data-act="newTx">Бірінші шығынды қосу</button>${mode !== "demo" ? `<button class="btn ghost" data-act="demo">Мысалмен танысу</button>` : ""}</div></div>` : "";
+
+  return {notes, goalsMini, recent, hasAny, onboarding};
+}
+function vHome(){
+  const k = curMonth(), st = monthStats(k), bal = balances(), total = totalBalance();
+  const dim = daysIn(k), day = new Date().getDate(), left = dim - day + 1;
+  const free = st.inc - st.exp - Math.max(0, st.sav);
+  let dayLine;
+  if (st.inc <= 0) dayLine = `<span>Осы айдағы кірісті қосыңыз — күндік лимит есептеледі.</span>`;
+  else if (free > 0) dayLine = `<span>Бүгін жұмсауға болады</span><b class="num">≈ ${fmt(free / left)}</b><span style="opacity:.8">· айдың соңына ${left} күн</span>`;
+  else dayLine = `<span>Бұл айда шығын кірістен ${fmt(-free)} асып кетті.</span>`;
+
+  const incCats = S.settings.cats.filter(c => c.type === "inc"), expCats = S.settings.cats.filter(c => c.type === "exp");
+  const incBy = {}; for (const t of st.txs) if (t.t === "inc") incBy[t.c] = (incBy[t.c] || 0) + txKZT(t);
+  const bubV = (v, txt) => `<span class="bub-v num ${v ? "" : "zero"}${txt.length > 9 ? " long" : ""}">${txt}</span>`;
+  const byVal = (arr, v) => arr.map((x, i) => ({x, i, v: v(x)})).sort((a, b) => (b.v - a.v) || (a.i - b.i)).map(o => o.x);
+  const incB = byVal(incCats, c => incBy[c.id] || 0).map(c => `<button class="bub inc" data-kind="inc" data-id="${esc(c.id)}" data-drag="1" data-act="newTx" data-type="inc" data-c="${esc(c.id)}"><span class="bub-c">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(incBy[c.id], fmt(incBy[c.id] || 0))}</button>`).join("") + `<button class="bub add" data-act="editCat" data-type="inc"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
+  const accB = byVal(S.settings.accounts, a => toKZT(bal[a.id], a.cur)).map(a => `<button class="bub acc" data-kind="acc" data-id="${esc(a.id)}" data-drag="1" data-act="editAcc"><span class="bub-c">${esc(a.icon)}</span><span class="bub-n">${esc(a.name)}</span><span class="bub-v num ${bal[a.id] < 0 ? "neg" : ""}">${esc(fmtC(bal[a.id], a.cur))}</span></button>`).join("") + `<button class="bub add" data-act="editAcc"><span class="bub-c">+</span><span class="bub-n">Шот қосу</span></button>`;
+  const expB = byVal(expCats, c => st.byCat[c.id] || 0).map(c => { const v = st.byCat[c.id] || 0, lim = S.settings.budgets[c.id]; const p = lim ? Math.min(100, v / lim * 100) : 0; const rc = lim && v > lim ? "var(--neg)" : p > 80 ? "var(--warn)" : "var(--pos)";
+    return `<button class="bub exp" data-kind="exp" data-id="${esc(c.id)}" data-act="newTx" data-type="exp" data-c="${esc(c.id)}"><span class="bub-c ${lim ? "ring" : ""}" style="${lim ? `--p:${p};--rc:${rc}` : ""}">${esc(c.icon)}</span><span class="bub-n">${esc(c.name)}</span>${bubV(v, fmt(v))}</button>`; }).join("") + `<button class="bub add" data-act="editCat" data-type="exp"><span class="bub-c">+</span><span class="bub-n">Санат қосу</span></button>`;
+  const accs = S.settings.accounts.map(a => `<button class="acc" data-act="editAcc" data-id="${esc(a.id)}"><span class="ic">${esc(a.icon)}</span><small>${esc(a.name)}</small><b class="num ${bal[a.id] < 0 ? "neg" : ""}">${fmtC(bal[a.id], a.cur)}</b>${a.cur && a.cur !== "KZT" ? `<small class="num">${rate(a.cur) ? "≈ " + fmt(toKZT(bal[a.id], a.cur)) : "бағам жоқ"}</small>` : ""}</button>`).join("") + `<button class="acc add" data-act="editAcc">+ Шот</button>`;
+
+  const {notes, goalsMini, recent, onboarding} = homeExtras(st, k, day);
 
   return `<div class="stack">
   <section class="hero"><div class="lbl">Барлық шоттарда</div><div class="big num">${fmt(total)}</div>
@@ -1443,7 +1550,7 @@ function vApplePay(){
   const c = t => `<code class="key">${t}</code>`;          // text the person types
   // little drawings of the iPhone screens (labels are the English iOS ones)
   const M = {
-    list: `<div class="mock"><div class="m-search">🔍 Transaction</div><div class="m-row">Time of Day</div><div class="m-row">Alarm</div><div class="m-row hl">💳 Transaction <span>›</span></div></div>`,
+    list: `<div class="mock"><div class="m-search">🔍 Wallet</div><div class="m-row">Time of Day</div><div class="m-row">Alarm</div><div class="m-row hl">💳 Wallet <span>›</span></div></div>`,
     cards: `<div class="mock"><div class="m-row">Cards <span>7 ›</span></div><div class="m-row hl">◉ Run Immediately</div><div class="m-row dim">○ Run After Confirmation</div><div class="m-btn">Next</div></div>`,
     url: `<div class="mock"><div class="m-act"><b>Get contents of</b> <span class="m-blue">URL</span> <span class="m-blue hl-ring">⌄</span></div></div>`,
     fields: `<div class="mock"><div class="m-row">Method <span class="m-blue">POST</span></div><div class="m-row">Headers</div><div class="m-kv"><i>apikey</i><i>sb_publishable…</i></div><div class="m-row">Request Body <span class="m-blue">JSON</span></div><div class="m-kv"><i>token</i><i>24d2…</i></div><div class="m-add">⊕ Add new field</div></div>`,
@@ -1456,10 +1563,10 @@ function vApplePay(){
      d: {kk: `iPhone-дағы ${k("Shortcuts")} қосымшасын ашыңыз (орысша iPhone-да «Команды»). Ол телефонда бар. Таппасаңыз, App Store-дан тегін жүктеңіз.`, ru: `Откройте на iPhone приложение ${k("Shortcuts")} («Команды»). Оно уже есть на телефоне; если нет — скачайте бесплатно в App Store.`, en: `Open the ${k("Shortcuts")} app on your iPhone. It comes with the phone; if it's missing, get it free from the App Store.`}},
     {t: {kk: "Automation → +", ru: "Automation → +", en: "Automation → +"},
      d: {kk: `Төменгі жақтағы ${k("Automation")} басыңыз. Сосын оң жақ жоғарыдағы ${k("+")} басыңыз.`, ru: `Внизу нажмите ${k("Automation")}, затем вверху справа ${k("+")}.`, en: `Tap ${k("Automation")} at the bottom, then ${k("+")} at the top right.`}},
-    {t: {kk: "Transaction таңдаңыз", ru: "Выберите Transaction", en: "Choose Transaction"},
-     d: {kk: `Ұзын тізім шығады. Төмендегі ${k("Search")} жолына ${c("Transaction")} деп жазып, ${k("Transaction")} басыңыз.`, ru: `Появится длинный список. В строке ${k("Search")} внизу введите ${c("Transaction")} и нажмите ${k("Transaction")}.`, en: `A long list appears. Type ${c("Transaction")} in the ${k("Search")} bar at the bottom and tap ${k("Transaction")}.`}, m: M.list},
+    {t: {kk: "Wallet таңдаңыз", ru: "Выберите Wallet", en: "Choose Wallet"},
+     d: {kk: `Ұзын тізім шығады. Төмендегі ${k("Search")} жолына ${c("Wallet")} деп жазып, ${k("Wallet")} басыңыз. Ескі iPhone-да бұл ${k("Transaction")} деп аталады — онда соны басыңыз.`, ru: `Появится длинный список. В строке ${k("Search")} внизу введите ${c("Wallet")} и нажмите ${k("Wallet")}. На старых iPhone он называется ${k("Transaction")} — тогда нажмите его.`, en: `A long list appears. Type ${c("Wallet")} in the ${k("Search")} bar at the bottom and tap ${k("Wallet")}. On older iPhones it's called ${k("Transaction")} — tap that instead.`}, m: M.list},
     {t: {kk: "Карталар және Run Immediately", ru: "Карты и Run Immediately", en: "Cards and Run Immediately"},
-     d: {kk: `${k("Cards")} жолын басып, <b>барлық</b> карталарыңызға ✓ қойыңыз. Төменде ${k("Run Immediately")} таңдаңыз. Сосын ${k("Next")} басыңыз.`, ru: `Нажмите ${k("Cards")} и отметьте ✓ <b>все</b> свои карты. Ниже выберите ${k("Run Immediately")}. Нажмите ${k("Next")}.`, en: `Tap ${k("Cards")} and tick ✓ <b>all</b> your cards. Below, choose ${k("Run Immediately")}. Tap ${k("Next")}.`}, m: M.cards},
+     d: {kk: `Карталар тізімінде (${k("Cards")} не ${k("Wallet passes")}) <b>барлық</b> карталарыңызға ✓ қойыңыз. Жоғарыда «When I tap any of … Wallet passes» деп тұрса — дұрыс. Төменде ${k("Run Immediately")} таңдаңыз. Сосын ${k("Next")} басыңыз.`, ru: `В списке карт (${k("Cards")} или ${k("Wallet passes")}) отметьте ✓ <b>все</b> свои карты. Если вверху написано «When I tap any of … Wallet passes» — всё верно. Ниже выберите ${k("Run Immediately")} и нажмите ${k("Next")}.`, en: `In the card list (${k("Cards")} or ${k("Wallet passes")}) tick ✓ <b>all</b> your cards. If the top says “When I tap any of … Wallet passes”, you're right. Below, choose ${k("Run Immediately")} and tap ${k("Next")}.`}, m: M.cards},
     {t: {kk: "Бос автоматтандыру", ru: "Пустая автоматизация", en: "Blank automation"},
      d: {kk: `${k("New Blank Automation")} басыңыз.`, ru: `Нажмите ${k("New Blank Automation")}.`, en: `Tap ${k("New Blank Automation")}.`}},
     {t: {kk: "Get Contents of URL қосыңыз", ru: "Добавьте Get Contents of URL", en: "Add Get Contents of URL"},
@@ -1827,7 +1934,10 @@ document.addEventListener("contextmenu", e => { if (e.target.closest && e.target
 /* account editor */
 function openAcc(id){
   const a = id ? acc(id) : null;
-  openSheet(a ? "Шотты өзгерту" : "Жаңа шот", `
+  openSheet(a ? "Шотты өзгерту" : "Жаңа шот", `${UI2 ? `
+    <div class="skin-prev" id="a-prev" data-bal="${a ? balances()[a.id] : 0}">${cardHTML(a || {name: "", cur: "KZT"}, a ? balances()[a.id] : 0, {preview: true})}</div>
+    <input type="hidden" id="a-skin" value="${skinOf(a).id}">
+    <div class="field"><span class="flabel">Карта түрі</span><div class="skins">${SKINS.map(x => `<button type="button" class="skin" data-act="pickSkin" data-v="${x.id}" aria-pressed="${skinOf(a).id === x.id}" style="--cbg:${x.bg};--cfg:${x.fg}"><span>${esc(x.label)}</span></button>`).join("")}</div></div>` : ""}
     <div class="frow" style="grid-template-columns:80px 1fr"><div class="field"><label for="a-icon">Белгі</label><input class="inp" id="a-icon" maxlength="4" value="${esc(a ? a.icon : "💳")}" style="text-align:center;font-size:20px"></div><div class="field"><label for="a-name">Атауы</label><input class="inp" id="a-name" placeholder="Мысалы: Kaspi Gold" value="${esc(a ? a.name : "")}"></div></div>
     <div class="field"><label for="a-cur">Валюта</label><select class="inp" id="a-cur">${curOptions(a ? a.cur : "KZT")}</select>${a && allTx().some(t => t.acc === a.id || t.to === a.id) ? `<span class="small muted">Валютаны өзгертсеңіз, бұрынғы операциялардың сомасы жаңа валютада саналады.</span>` : `<span class="small muted">Мысалы, долларлық депозит үшін $ таңдаңыз — теңгеге бүгінгі бағаммен есептеледі.</span>`}</div>
     <div class="field"><label for="a-init">Бастапқы қалдық</label><input class="inp num" id="a-init" inputmode="decimal" value="${a ? esc(a.initial) : ""}" placeholder="0"><span class="small muted">Қосымшаны бастаған кездегі шоттағы сома. Қазіргі қалдық = бастапқы + кіріс − шығын.</span></div>
@@ -1842,8 +1952,9 @@ function openAcc(id){
       const nowEl = $("#a-now", b);
       if (a && nowEl && nowEl.value.trim()) { const now = parseAmt(nowEl.value); if (isFinite(now)) init = init + (now - balances()[a.id]); }
       const cur = $("#a-cur", b).value || "KZT";
-      if (a) Object.assign(a, {name, icon: $("#a-icon", b).value.trim() || "💳", initial: Math.round(init * 100) / 100, cur});
-      else S.settings.accounts.push({id: uid(), name, icon: $("#a-icon", b).value.trim() || "💳", initial: init, cur});
+      const skinEl = $("#a-skin", b), skin = skinEl ? skinEl.value : (a && a.skin) || "";
+      if (a) Object.assign(a, {name, icon: $("#a-icon", b).value.trim() || "💳", initial: Math.round(init * 100) / 100, cur, skin});
+      else S.settings.accounts.push({id: uid(), name, icon: $("#a-icon", b).value.trim() || "💳", initial: init, cur, skin});
       if (cur !== "KZT") fetchRates().then(ok => { if (ok) render(); });
       commitSettings(); closeSheet(); toast("Сақталды");
     };
@@ -2182,6 +2293,13 @@ const ACT = {
   import: () => $("#import-file").click(),
   wipe: el => armDelete(el, wipe),
   demo: () => enterDemo(),
+  pickSkin: el => {
+    const box = el.closest(".sheet") || document, x = SKIN[el.dataset.v]; if (!x) return;
+    $("#a-skin", box).value = x.id;
+    $$(".skin", box).forEach(s => s.setAttribute("aria-pressed", s === el));
+    const prev = $("#a-prev", box), name = ($("#a-name", box) || {}).value || "", cur = ($("#a-cur", box) || {}).value || "KZT";
+    if (prev) prev.innerHTML = cardHTML({name, cur}, +prev.dataset.bal || 0, {preview: true, skin: x});
+  },
   lang: el => { if (el.dataset.v === LANG) return; if (LANG !== "kk") { lsSet("qalta-lang", el.dataset.v); location.reload(); return; } setLang(el.dataset.v); render(); },
   apOn: () => apOn(),
   apOff: () => apOff(),
