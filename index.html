@@ -935,7 +935,7 @@ function render(){
   if (mode === "demo") banner = `<div class="banner demo"><span>Бұл мысал деректер. Ештеңе сақталмайды.</span><button class="btn sm primary" data-act="exitDemo">Өз деректеріме оралу</button></div>`;
   else if (mode === "local" && hasCloud()) banner = `<div class="banner"><span>Деректер тек осы құрылғыда. Телефон мен ноутта бірдей болу үшін аккаунтқа кіріңіз.</span><button class="btn sm primary" data-act="login">Кіру</button></div>`;
   const scrollY = window.scrollY;
-  $("#main").innerHTML = `${banner}<div class="topbar"><div class="brand"><div class="logo">₸</div><b>${ui.tab === "home" ? "Қалта" : esc(titles[ui.tab])}</b></div>${syncHTML()}</div>${V()}`;
+  $("#main").innerHTML = `${banner}<div class="topbar"><div class="brand">${UI2 && ui.tab !== "home" ? "" : `<div class="logo">₸</div>`}<b>${ui.tab === "home" ? "Қалта" : esc(titles[ui.tab])}</b></div>${syncHTML()}</div>${V()}`;
   window.scrollTo(0, scrollY);
 }
 

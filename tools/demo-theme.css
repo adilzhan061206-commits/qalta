@@ -353,3 +353,7 @@ body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
 .wallet .wcard,.wallet .wcard.bub{aspect-ratio:1.8}
 .wallet .wadd{aspect-ratio:auto;min-height:56px}
 .wallet .wc-mid{display:none}
+/* More: account as its own quiet card; no second black badge under the title */
+.m2-head{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}
+.m2-av{background:var(--surface-2);color:var(--text);font-size:17px}
+.brand b{font-size:28px}
