@@ -756,6 +756,31 @@ body.dragging .drop-dock .bub .bub-c{outline:0!important;transform:none}
 html{touch-action:manipulation}
 .tabbar,.fab{will-change:transform;transform:translateZ(0)}
 .home2 > .card:nth-child(n+6),.home2 > .grid2,.more2 > .m2-group,.stack > .card.goal{content-visibility:auto;contain-intrinsic-size:auto 320px}
+
+/* Apple-Music-style tab bar: equal tabs with icon + name, and a glass lens that slides to the open one */
+@media (max-width:899px){
+  .tabbar{display:flex;gap:0;padding:4px;touch-action:none}
+  .tab{position:relative;z-index:1;flex:1 1 0;flex-direction:column;gap:1px;padding:0 2px;font-size:9.5px;letter-spacing:-.15px;font-weight:600;color:var(--text);background:none!important;box-shadow:none!important}
+  .tab span{display:block!important;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tab svg{width:22px;height:22px}
+  .tab[aria-current="page"]{flex:1 1 0;color:var(--text)}
+  .tab:not([aria-current]){opacity:.72}
+  .tab-lens{position:absolute;left:0;top:4px;bottom:4px;width:56px;border-radius:25px;z-index:0;pointer-events:none;
+    background:color-mix(in srgb,var(--surface) 70%,transparent);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 1px rgba(0,0,0,.05),0 2px 10px rgba(13,15,20,.12);
+    transition:transform .5s cubic-bezier(.3,1.45,.55,1),width .35s ease,scale .3s ease;will-change:transform}
+  .tab-lens.no-anim{transition:none}
+  /* while it travels: the lens swells a little and its rim catches colour, like glass */
+  .tab-lens::before{content:"";position:absolute;inset:-1.5px;border-radius:inherit;padding:1.5px;opacity:0;transition:opacity .25s;
+    background:conic-gradient(from 0deg,#ff5f6d,#ffc371,#7cffcb,#5ac8fa,#b98cff,#ff5f6d);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+  .tab-lens.moving{scale:1.14 1.1}
+  .tab-lens.moving::before{opacity:.9}
+  .tab-lens.held{scale:1.18 1.14;background:color-mix(in srgb,var(--surface) 45%,transparent);-webkit-backdrop-filter:blur(3px) saturate(1.8);backdrop-filter:blur(3px) saturate(1.8)}
+}
+@media (max-width:899px) and (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tab-lens{background:color-mix(in srgb,#fff 14%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 10px rgba(0,0,0,.4)}}
+@media (max-width:899px){:root[data-theme="dark"] .tab-lens{background:color-mix(in srgb,#fff 14%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 2px 10px rgba(0,0,0,.4)}}
+@media (min-width:900px){.tab-lens{display:none}}
 </style>
 </head>
 <body>
@@ -1341,6 +1366,45 @@ function syncHTML(){
   const txt = mode === "cloud" && syncState === "busy" ? "Сақталуда…" : mode === "cloud" && syncState === "err" ? "Синхрон қатесі" : mode === "cloud" && syncState === "offline" ? "Офлайн" : m;
   return `<span class="sync ${cls}" id="sync" title="Деректер қайда сақталады"><i></i>${txt}</span>`;
 }
+
+/* ---------- glass lens under the current tab (phone) ---------- */
+let lensAt = null, lensDrag = null;
+function lensBox(tab){ const bar = $("#tabbar"); return {x: tab.offsetLeft, w: tab.offsetWidth, bar}; }
+function placeLens(x, w, animate){
+  const lens = $("#tabbar .tab-lens"); if (!lens) return;
+  lens.classList.toggle("no-anim", !animate);
+  lens.style.width = w + "px"; lens.style.transform = `translateX(${x}px)`;
+}
+function moveLens(){
+  const tab = $(`#tabbar .tab[data-tab="${ui.tab}"]`); if (!tab || !tab.offsetWidth) return;
+  const {x, w} = lensBox(tab), first = lensAt === null, moved = !first && lensAt !== ui.tab;
+  placeLens(x, w, !first);
+  const lens = $("#tabbar .tab-lens");
+  if (moved && lens && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) { lens.classList.remove("moving"); void lens.offsetWidth; lens.classList.add("moving"); clearTimeout(moveLens.t); moveLens.t = setTimeout(() => lens.classList.remove("moving"), 520); }
+  lensAt = ui.tab;
+}
+addEventListener("resize", () => { lensAt = null; moveLens(); });
+// press and slide along the bar, like iOS: the lens follows the finger, letting go opens that tab
+document.addEventListener("pointerdown", e => {
+  const bar = e.target.closest && e.target.closest("#tabbar"); if (!bar || window.innerWidth >= 900) return;
+  lensDrag = {x0: e.clientX, pid: e.pointerId, on: false};
+});
+document.addEventListener("pointermove", e => {
+  if (!lensDrag || e.pointerId !== lensDrag.pid) return;
+  if (!lensDrag.on && Math.abs(e.clientX - lensDrag.x0) < 8) return;
+  const bar = $("#tabbar"), lens = $("#tabbar .tab-lens"), cur = $("#tabbar .tab[aria-current]"); if (!bar || !lens || !cur) return;
+  lensDrag.on = true; lens.classList.add("moving", "held");
+  const r = bar.getBoundingClientRect(), w = cur.offsetWidth;
+  placeLens(Math.max(4, Math.min(r.width - w - 4, e.clientX - r.left - w / 2)), w, false);
+});
+document.addEventListener("pointerup", e => {
+  const d = lensDrag; lensDrag = null; if (!d || !d.on) return;
+  const lens = $("#tabbar .tab-lens"); if (lens) lens.classList.remove("moving", "held");
+  const hit = [...$$("#tabbar .tab")].map(t => ({t, r: t.getBoundingClientRect()})).sort((a, b) => Math.abs(a.r.left + a.r.width / 2 - e.clientX) - Math.abs(b.r.left + b.r.width / 2 - e.clientX))[0];
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
+  if (hit && hit.t.dataset.tab !== ui.tab) { ui.tab = hit.t.dataset.tab; ui.sub = null; closeSheet(); render(); window.scrollTo(0, 0); } else moveLens();
+});
+document.addEventListener("pointercancel", () => { if (lensDrag && lensDrag.on) { lensDrag = null; const l = $("#tabbar .tab-lens"); if (l) l.classList.remove("moving", "held"); moveLens(); } else lensDrag = null; });
 function render(){
   const authOn = mode === "auth";
   $("#tabbar").hidden = authOn; $("#fab").hidden = authOn; $("#side").hidden = authOn;
@@ -1349,7 +1413,11 @@ function render(){
   if (!S.settings) return;
   accrueInterest();
   const tabBtns = TABS.map(([id, label, ic]) => `<button class="tab" data-act="tab" data-tab="${id}" ${ui.tab === id ? 'aria-current="page"' : ""}>${ic}<span>${label}</span></button>`).join("");
-  $("#tabbar").innerHTML = tabBtns;
+  // the phone tab bar is built once and kept, so its glass lens can slide between tabs
+  const bar = $("#tabbar");
+  if (bar.dataset.built !== LANG) { bar.innerHTML = `<span class="tab-lens" aria-hidden="true"></span>${tabBtns}`; bar.dataset.built = LANG; }
+  else $$(".tab", bar).forEach(b => { if (b.dataset.tab === ui.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+  moveLens();
   $("#side").innerHTML = `<div class="brand"><div class="logo">₸</div><b>Қалта</b></div>${tabBtns}<button class="btn primary add-btn" data-act="newTx">${I.plus} Операция қосу</button>`;
   const V = {home: UI2 ? vHome2 : vHome, ops: vOps, an: vAnalysis, goals: vGoals, more: vMore}[ui.tab] || vHome;
   const titles = {home: "", ops: "Операциялар", an: "Талдау", goals: "Мақсаттар", more: "Тағы"};
