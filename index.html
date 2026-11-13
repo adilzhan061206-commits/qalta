@@ -1121,12 +1121,27 @@ function applyRemote(rows){
   if (changed) { bump(); saveLocal(); }
   return changed;
 }
+// A month this device holds but the server doesn't, with nothing waiting to upload and nothing added since the
+// download started, is not the person's data (e.g. demo months left behind): drop it so balances match the server.
+function dropMissing(rows, since){
+  const have = new Set((rows || []).map(r => r.path));
+  let changed = false;
+  for (const k of Object.keys(S.months)) {
+    const p = "m/" + k;
+    if (have.has(p) || meta.dirty[p] || (S.months[k] || []).some(t => (t.ts || 0) >= since)) continue;
+    delete S.months[k]; changed = true;
+  }
+  if (changed) { bump(); saveLocal(); }
+  return changed;
+}
 async function pull(){
   if (mode !== "cloud" || !sb || !navigator.onLine) return;
   try {
+    const since = Date.now() - 60000;
     const {data, error} = await sb.from("qalta_docs").select("path,data");
     if (error) throw error;
-    if (applyRemote(data)) render();
+    const a = applyRemote(data), b = data.length ? dropMissing(data, since) : false;
+    if (a || b) render();
     flush(); pullInbox();
   } catch { setSync("err"); }
 }
@@ -1232,6 +1247,7 @@ async function boot(){
   else { mode = "auth"; render(); }
 }
 async function startCloud(s){
+  if (mode === "demo") { if (saved) saved.cloud = s; return; }   // supabase fires SIGNED_IN on every return to the app: must not turn demo data into real data
   if (mode === "cloud" && session && session.user.id === s.user.id) return;
   session = s;
   if (meta.uid && meta.uid !== s.user.id) { S.settings = defaults(); S.months = {}; meta.dirty = {}; bump(); }
@@ -1243,6 +1259,7 @@ async function startCloud(s){
   // same account as last time: this device already holds its data, so new Apple Pay payments can come in now
   if (!firstLink) { inboxEarly = true; pullInbox(); }
   try {
+    const since = Date.now() - 60000;
     const {data, error} = await sb.from("qalta_docs").select("path,data");
     if (error) throw error;
     if (!data.length) {
@@ -1250,7 +1267,7 @@ async function startCloud(s){
       meta.dirty.settings = 1; for (const k of Object.keys(S.months)) meta.dirty["m/" + k] = 1; saveMeta();
     } else {
       if (firstLink) { meta.dirty = {}; saveMeta(); S.months = {}; }
-      applyRemote(data);
+      applyRemote(data); dropMissing(data, since);
     }
     cloudReady = true; render();
     flush(); pullInbox();
@@ -3110,7 +3127,7 @@ function wipe(){
   persistSettings(); bump(); render(); toast("Барлық деректер өшірілді");
 }
 function enterDemo(){ if (mode === "demo") return; saved = {settings: S.settings, months: S.months, mode}; const d = demoState(); S.settings = d.settings; S.months = d.months; mode = "demo"; ui.sub = null; ui.tab = "home"; bump(); render(); window.scrollTo(0, 0); }
-function exitDemo(){ if (mode !== "demo" || !saved) return; S.settings = saved.settings; S.months = saved.months; mode = saved.mode; saved = null; bump(); render(); pull(); }
+function exitDemo(){ if (mode !== "demo" || !saved) return; const c = saved.cloud; S.settings = saved.settings; S.months = saved.months; mode = saved.mode; saved = null; bump(); render(); if (c && mode !== "cloud") startCloud(c); else pull(); }
 
 /* ---------- events ---------- */
 const ACT = {
