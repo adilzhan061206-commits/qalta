@@ -1328,7 +1328,8 @@ window.addEventListener("offline", () => { if (mode === "cloud") setSync("offlin
 let lastPull = 0;
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
-  if (Date.now() - lastPull > 60000) { lastPull = Date.now(); pull(); } else pullInbox();
+  pullInbox();   // new Apple Pay payments first, straight away: they don't wait for the full sync below
+  if (Date.now() - lastPull > 60000) { lastPull = Date.now(); pull(); }
 });
 async function signOut(){
   try { if (rtChannel) { await sb.removeChannel(rtChannel); rtChannel = null; } await sb.auth.signOut(); } catch {}

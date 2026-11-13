@@ -13,6 +13,12 @@ async function secret(name: string): Promise<string> {
   return data as string;
 }
 
+// Apple Pay records itself, so a day with only Apple Pay payments still gets the reminder (for cash, transfers…)
+const AP: Record<string, (n: number) => string> = {
+  kk: n => `Бүгін Apple Pay-мен ${n} төлем өзі жазылды ✓ Қолма-қол не басқа шығын болды ма?`,
+  ru: n => `Сегодня Apple Pay записал ${n} плат. сам ✓ Были ещё наличные или другие траты?`,
+  en: n => `Apple Pay logged ${n} payment${n > 1 ? "s" : ""} today ✓ Any cash or other spending?`,
+};
 const T: Record<string, { title: string; plain: string; streak: (n: number) => string }> = {
   kk: { title: "Қалта", plain: "Бүгінгі шығындарды енгіздіңіз бе? Бір минут жетеді ✍️", streak: n => `🔥 ${n} күн қатарынан жазып келесіз! Бүгінгісін енгізіп, серияны үзбеңіз.` },
   ru: { title: "Қалта", plain: "Внесли сегодняшние расходы? Хватит одной минуты ✍️", streak: n => `🔥 ${n} дн. подряд! Внесите сегодняшние расходы, чтобы не прервать серию.` },
@@ -80,10 +86,14 @@ Deno.serve(async (req) => {
     // what has this person recorded this month and last month?
     const prev = shiftDays(today.slice(0, 7) + "-01", -1).slice(0, 7);
     const { data: docs } = await sb.from("qalta_docs").select("path,data").eq("user_id", s.user_id).in("path", ["m/" + today.slice(0, 7), "m/" + prev]);
-    const days = new Set<string>();
-    for (const d of docs || []) for (const t of (d.data && d.data.items) || []) if (t && t.date) days.add(t.date);
+    const days = new Set<string>(), mine = new Set<string>();
+    let apToday = 0;
+    for (const d of docs || []) for (const t of (d.data && d.data.items) || []) if (t && t.date) {
+      days.add(t.date);
+      if (t.ap) { if (t.date === today) apToday++; } else mine.add(t.date);   // only what the person typed in counts as "done today"
+    }
 
-    if (days.has(today) && !force) {
+    if (mine.has(today) && !force) {
       await sb.from("qalta_push").update({ last_sent: today }).eq("endpoint", s.endpoint);
       out.push({ skipped: "already recorded today" });
       continue;
@@ -91,7 +101,7 @@ Deno.serve(async (req) => {
     let streak = 0;
     for (let d = shiftDays(today, -1); days.has(d); d = shiftDays(d, -1)) streak++;
     const t = T[s.lang] || T.kk;
-    const payload = JSON.stringify({ title: t.title, body: streak >= 2 ? t.streak(streak) : t.plain, url: "./?add=exp", tag: "qalta-daily" });
+    const payload = JSON.stringify({ title: t.title, body: apToday ? (AP[s.lang] || AP.kk)(apToday) : streak >= 2 ? t.streak(streak) : t.plain, url: "./?add=exp", tag: "qalta-daily" });
     try {
       await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 4 * 3600, urgency: "normal" });
       await sb.from("qalta_push").update({ last_sent: today }).eq("endpoint", s.endpoint);

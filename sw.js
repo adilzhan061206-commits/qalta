@@ -1,6 +1,6 @@
 // Қалта service worker: қосымшаны интернетсіз ашу үшін файлдарды кэштейді.
 // Жаңа нұсқа шығарғанда VERSION-ды өзгертіңіз.
-const VERSION = "qalta-v46";
+const VERSION = "qalta-v47";
 const CORE = [
   "./",
   "./index.html",
@@ -14,7 +14,7 @@ const CORE = [
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, {cache: "reload"})))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -34,13 +34,22 @@ self.addEventListener("fetch", e => {
   // Валюта бағамы әрқашан жаңа болсын (офлайнда қосымша соңғы сақталған бағамды қолданады)
   if (url.hostname === "open.er-api.com" || url.pathname.includes("currency-api")) return;
 
-  // Беттің өзі: алдымен желі (жаңа нұсқа үшін), болмаса кэш
-  if (req.mode === "navigate") {
+  // Беттің өзі: кэштен бірден ашылады (күту жоқ), фонда желіден жаңарады.
+  // Жаңа нұсқа шықса, жаңа service worker орнатылып, бет бір рет өзі қайта жүктеледі.
+  const root = new URL("./", self.registration.scope).pathname;
+  if (req.mode === "navigate" && (url.pathname === root || url.pathname === root + "index.html")) {
+    const net = fetch(req.url, {cache: "no-cache", credentials: "same-origin"})
+      .then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put("./index.html", copy)); } return res; });
     e.respondWith(
-      fetch(req.url, {cache: "no-cache", credentials: "same-origin"})   // skip the browser's 10-minute page cache
-        .then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return res; })
-        .catch(() => caches.match(req).then(hit => hit || caches.match("./index.html")))
+      caches.match("./index.html").then(hit => {
+        if (hit) { e.waitUntil(net.catch(() => {})); return hit; }
+        return net.catch(() => caches.match(req));
+      })
     );
+    return;
+  }
+  if (req.mode === "navigate") {   // other pages (demo): network first
+    e.respondWith(fetch(req.url, {cache: "no-cache", credentials: "same-origin"}).catch(() => caches.match(req)));
     return;
   }
 
